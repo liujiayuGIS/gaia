@@ -1,0 +1,20 @@
+{
+  "backend_tests": {
+    "passed": 27,
+    "command": ".venv/bin/python -m pytest -q"
+  },
+  "frontend_build": "passed",
+  "browser_workflow": [
+    "synthetic demo",
+    "buffer and POI count map",
+    "CSV export",
+    "API key not persisted",
+    "refresh persistence",
+    "run history",
+    "CSV upload",
+    "mobile no horizontal overflow"
+  ],
+  "live_provider": "not tested: user API credentials required",
+  "gis_method": "per-point WGS84 AEQD; independent ellipsoidal vertex distance check; covers boundary predicate",
+  "provider_compatibility": "GPT-5.6 Sol Chat Completions function tools explicitly use reasoning_effort=none; other model reasoning is unchanged"
+}
