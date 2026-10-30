@@ -1,4 +1,4 @@
-"""Chat Completions adapter and redacted, actionable provider diagnostics."""
+"""Responses and Chat Completions adapters with redacted provider diagnostics."""
 from __future__ import annotations
 import os
 import re
@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 import httpx
 
 
-def resolve_config(base_url, model, api_key):
+def resolve_config(base_url, model, api_key, protocol="auto", reasoning_effort="medium"):
     base=(base_url or os.environ.get('GIS_LLM_BASE_URL','https://api.deepseek.com')).strip().rstrip('/')
     parsed=urlparse(base)
     if parsed.scheme not in ('http','https') or not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment:
@@ -21,7 +21,10 @@ def resolve_config(base_url, model, api_key):
     key=api_key.strip() or os.environ.get('GIS_LLM_API_KEY','').strip()
     if not key:
         raise ValueError('请配置 API Key，或切换到离线指令模式。')
-    return {'base_url':base,'model':name,'api_key':key}
+    if protocol not in ('auto','responses','chat_completions') or reasoning_effort not in ('none','low','medium','high'):
+        raise ValueError('接口协议或推理强度无效。')
+    selected=('responses' if parsed.hostname=='api.openai.com' else 'chat_completions') if protocol=='auto' else protocol
+    return {'base_url':base,'model':name,'api_key':key,'protocol':selected,'reasoning_effort':reasoning_effort}
 
 
 def completion_payload(config, messages, tools):
@@ -113,11 +116,51 @@ def request_completion(client, config, payload):
 
 
 def test_connection(config, tools):
-    # Explicit user action only. No workspace data or history is sent.
-    payload=completion_payload(config,[{'role':'user','content':'请只回复 OK。'}],tools)
-    payload['tool_choice']='none'
-    with httpx.Client(timeout=httpx.Timeout(45,connect=10),follow_redirects=False) as client:
-        data=request_completion(client,config,payload)
-    note='当前接口以非推理模式调用该模型的工具。' if payload.get('reasoning_effort')=='none' else ''
-    return {'ok':True,'model':data.get('model',config['model']),
-            'message':'连接成功：模型请求及工具参数已被服务接受。'+note+'此测试未读取地理数据，也未运行 GIS 工具。'}
+    with httpx.Client(timeout=httpx.Timeout(90,connect=10),follow_redirects=False) as client:
+        if config.get('protocol')=='responses':
+            payload=responses_payload(config,[{'role':'user','content':'请只回复 OK。'}],tools,'你是连接测试助手。只回复 OK，不调用工具。')
+            payload['tool_choice']='none'
+            data=request_responses(client,config,payload)
+            note='Responses API；保留推理与工具调用能力。'
+        else:
+            payload=completion_payload(config,[{'role':'user','content':'请只回复 OK。'}],tools)
+            payload['tool_choice']='none'
+            data=request_completion(client,config,payload)
+            note='Chat Completions；'+('当前模型工具调用使用非推理兼容模式。' if payload.get('reasoning_effort')=='none' else '')
+    return {'ok':True,'model':data.get('model',config['model']),'protocol':config.get('protocol','chat_completions'),
+            'message':'连接成功。'+note+'此测试未读取地理数据，也未运行 GIS 工具。'}
+
+
+def responses_payload(config,inputs,tools,instructions):
+    flattened=[]
+    for tool in tools:
+        fn=tool['function']
+        flattened.append({'type':'function','name':fn['name'],'description':fn.get('description',''),
+                          'parameters':fn['parameters'],'strict':False})
+    return {'model':config['model'],'instructions':instructions,'input':inputs,'tools':flattened,
+            'reasoning':{'effort':config.get('reasoning_effort','medium')},'max_output_tokens':8192,
+            'store':False,'include':['reasoning.encrypted_content']}
+
+
+def request_responses(client,config,payload):
+    try:
+        response=client.post(config['base_url'].rstrip('/')+'/responses',headers={'Authorization':'Bearer '+config['api_key']},json=payload)
+    except httpx.TimeoutException:
+        raise ProviderError({'status':None,'code':'timeout','message':'模型请求超时。推理任务可能需要更长时间，请降低推理强度或稍后重试。'}) from None
+    except httpx.RequestError:
+        raise ProviderError({'status':None,'code':'connection_error','message':'无法连接模型 Responses 接口，请检查网络和地址。'}) from None
+    if not response.is_success:
+        raise ProviderError(error_details(response,config['api_key']))
+    try:
+        data=response.json()
+        if not isinstance(data.get('output'),list):raise ValueError()
+    except (ValueError,TypeError,AttributeError):
+        raise ProviderError({'status':200,'code':'invalid_response','message':'服务响应不符合 Responses API，请检查接口协议。'}) from None
+    if data.get('status') in ('failed','incomplete','cancelled'):
+        reason=(data.get('incomplete_details') or data.get('error') or {}).get('reason','未完成')
+        raise ProviderError({'status':200,'code':'incomplete','message':'模型未完成本轮响应：'+redact(reason,config['api_key'])})
+    return data
+
+
+def response_text(data):
+    return '\n'.join(part.get('text','') for item in data['output'] if item.get('type')=='message' for part in item.get('content',[]) if part.get('type')=='output_text')

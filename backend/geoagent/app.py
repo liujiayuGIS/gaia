@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from .store import Store, now
 from .harness import Registry, execute_run
 from .provider import ProviderError, resolve_config, test_connection
-from . import demo, gis
+from . import demo, gis, formats, algorithms, cartography
 
 ROOT=Path(__file__).resolve().parents[2]
 
@@ -28,20 +28,30 @@ class ChatRequest(BaseModel):
     base_url: str='https://api.deepseek.com'
     model: str='deepseek-chat'
     api_key: str=''
+    protocol: str='auto'
+    reasoning_effort: str='medium'
+    algorithm_id: str | None=None
+    workflow_id: str | None=None
+    arguments: dict=Field(default_factory=dict)
 
 class ConnectionRequest(BaseModel):
     model_config=ConfigDict(extra='forbid')
     base_url: str=Field(max_length=1000)
     model: str=Field(max_length=200)
     api_key: str=Field(default='',repr=False,max_length=1000)
+    protocol: str='auto'
+    reasoning_effort: str='medium'
 
 class StyleRequest(BaseModel):
     visible: bool | None=None
+    opacity: float | None=Field(default=None,ge=0,le=1)
+    labels: bool | None=None
+    field: str | None=None
     color: str | None=Field(default=None,pattern=r'^#[0-9a-fA-F]{6}$')
 
 
 def create_app(workspace=None):
-    app=FastAPI(title='GeoAgent Local',version='0.1.0')
+    app=FastAPI(title='GeoAgent Local',version='0.2.0')
     app.add_middleware(TrustedHostMiddleware,allowed_hosts=['127.0.0.1','localhost','testserver','[::1]'])
     store=Store(workspace or os.environ.get('GEOAGENT_WORKSPACE',ROOT/'.geoagent'))
     registry=Registry(store)
@@ -63,11 +73,11 @@ def create_app(workspace=None):
 
     @app.get('/api/health')
     def health():
-        return {'ok':True,'version':'0.1.0','model_configured':bool(os.environ.get('GIS_LLM_API_KEY')),'tools':list(registry.tools),'limits':{'upload_mb':12,'features':20000}}
+        return {'ok':True,'version':'0.2.0','model_configured':bool(os.environ.get('GIS_LLM_API_KEY')),'tools':list(registry.tools),'limits':{'upload_mb':250,'features':100000,'raster_analysis_pixels':16000000}}
 
     @app.post('/api/model/test')
     def model_test(body: ConnectionRequest):
-        config=resolve_config(body.base_url,body.model,body.api_key)
+        config=resolve_config(body.base_url,body.model,body.api_key,body.protocol,body.reasoning_effort)
         try:
             return test_connection(config,[t.schema() for t in registry.tools.values()])
         except ProviderError as exc:
@@ -81,22 +91,82 @@ def create_app(workspace=None):
     def load_demo():
         return demo.seed(store)
 
+    @app.get('/api/capabilities')
+    def capabilities():
+        return {'algorithms':algorithms.CATALOG,'formats':formats.format_catalog(),'protocols':['responses','chat_completions'],
+                'map_exports':['png','jpeg','tiff','svg','pdf'],'qgis_engine':'not installed' if not formats.shutil.which('qgis_process') else 'detected'}
+
+    @app.get('/api/imports')
+    def imports():
+        return store.objects('assets')
+
+    @app.post('/api/imports')
+    async def stage(files: list[UploadFile]=File(...)):
+        content=[];size=0
+        for file in files:
+            data=await file.read(formats.MAX_UPLOAD+1);size+=len(data)
+            if size>formats.MAX_UPLOAD:raise ValueError('本次文件超过250 MB。')
+            content.append((file.filename or 'data',data))
+        return formats.stage_files(store,content)
+
+    @app.post('/api/imports/{asset_id}/load')
+    def load_asset(asset_id: str,body: dict):
+        return formats.import_asset(store,asset_id,body.get('resource'),body.get('source_crs'),body.get('sublayer'))
+
     @app.post('/api/layers/upload')
-    async def upload(file: UploadFile=File(...),source_crs: str=Form('EPSG:4326')):
-        if not (file.filename or '').lower().endswith(('.geojson','.json','.csv')):
-            raise ValueError('第一版支持 GeoJSON 和 CSV。')
-        content=await file.read(12*1024*1024+1)
-        if len(content)>12*1024*1024:
-            raise ValueError('文件超过 12 MB。')
-        try:
-            data=gis.import_bytes(file.filename,content,source_crs)
-        except (UnicodeDecodeError,json.JSONDecodeError):
-            raise ValueError('无法读取文件，请使用 UTF-8 编码的有效 GeoJSON 或 CSV。') from None
-        return store.add_layer(Path(file.filename).stem,data,provenance={'source_crs':source_crs,'import':'normalized_to_WGS84','coordinate_basis':'user_declared'})
+    async def upload(file: UploadFile=File(...),source_crs: str=Form('')):
+        content=await file.read(formats.MAX_UPLOAD+1)
+        if len(content)>formats.MAX_UPLOAD:raise ValueError('文件超过250 MB。')
+        asset=formats.stage_files(store,[(file.filename or 'data',content)])
+        return formats.import_asset(store,asset['id'],source_crs=source_crs or None)
+
+    @app.get('/api/workflows')
+    def workflows():return store.objects('workflows')
+
+    @app.get('/api/workflows/{workflow_id}')
+    def workflow_file(workflow_id: str):return store.object('workflows',workflow_id)
+
+    @app.get('/api/layout')
+    def layout():return cartography.get_layout(store)
+
+    @app.patch('/api/layout')
+    def update_layout(body: dict):return cartography.update_layout(store,body)
+
+    @app.get('/api/layout/preview')
+    def preview():return Response(cartography.render_map(store,'svg',100),media_type='image/svg+xml')
+
+    @app.post('/api/layout/export')
+    def export_map(body: dict):return cartography.export_map(store,body.get('format','pdf'),int(body.get('dpi',150)),body.get('layer_ids'))
+
+    @app.get('/api/exports')
+    def exports():return store.objects('exports')
+
+    @app.get('/api/exports/{export_id}/download')
+    def download(export_id: str):
+        item=store.object('exports',export_id);path=store.root/item['path']
+        return FileResponse(path,filename=item['name'])
+
+    @app.post('/api/view')
+    def save_map_state(body: dict):
+        return store.put_object('settings','map_state',{k:body[k] for k in ('bounds','zoom','center') if k in body})
+
+    @app.get('/api/view')
+    def view():return store.setting('map_command',{})
+
+    @app.get('/api/layers/{layer_id}/preview')
+    def raster_preview(layer_id: str):return Response(formats.raster_preview(store,layer_id),media_type='image/png')
+
+    @app.patch('/api/layers/{layer_id}/name')
+    def rename(layer_id: str,body: dict):
+        name=str(body.get('name','')).strip()
+        if not name:raise ValueError('图层名称不能为空。')
+        return store.patch_layer(layer_id,{'name':name[:100]})
 
     @app.get('/api/layers/{layer_id}/data')
     def data(layer_id: str):
-        return store.data(layer_id)
+        if store.get_layer(layer_id).get('kind')=='raster':return {'type':'FeatureCollection','features':[]}
+        data=store.data(layer_id)
+        return {**data,'features':data['features'][:10000],'preview_truncated':len(data['features'])>10000,'total':len(data['features'])}
 
     @app.get('/api/layers/{layer_id}/inspect')
     def inspect(layer_id: str):
@@ -104,10 +174,17 @@ def create_app(workspace=None):
 
     @app.patch('/api/layers/{layer_id}/style')
     def style(layer_id: str,body: StyleRequest):
-        return store.style_layer(layer_id,**body.model_dump(exclude_none=True))
+        return store.style_layer(layer_id,**body.model_dump(exclude_unset=True))
 
     @app.get('/api/layers/{layer_id}/export')
-    def export(layer_id: str,format: str='geojson'):
+    def export(layer_id: str,format: str='geojson',target_crs: str | None=None):
+        meta=store.get_layer(layer_id)
+        if meta.get('kind')=='raster':
+            if format not in ('tif','tiff','geotiff'):raise ValueError('栅格原始数据导出请选择 tif。')
+            return FileResponse(formats.raster_path(store,layer_id),filename=layer_id+'.tif')
+        if format not in ('geojson','csv'):
+            path=formats.export_vector(store,layer_id,format,target_crs)
+            return FileResponse(path,filename=path.name)
         data=store.data(layer_id)
         if format=='csv':
             fields=sorted({k for f in data['features'] for k in f['properties']})
@@ -128,15 +205,15 @@ def create_app(workspace=None):
     def chat(body: ChatRequest):
         config=None
         if body.mode=='model':
-            config=resolve_config(body.base_url,body.model,body.api_key)
-        elif body.mode!='offline':
+            config=resolve_config(body.base_url,body.model,body.api_key,body.protocol,body.reasoning_effort)
+        elif body.mode not in ('offline','algorithm','workflow'):
             raise ValueError('未知运行模式。')
         # One workspace mutation owner. Parallel clients cannot race on the workspace.
         with gate:
             if active:
                 raise HTTPException(409,'工作区已有运行中的任务，请等待或停止。')
             run={'id':uuid.uuid4().hex,'status':'queued','mode':body.mode,'session_id':body.session_id,
-                 'message_input':body.message,'selected_layers':body.selected_layers,'created_at':now(),'message':'','output_layers':[]}
+                 'message_input':body.message,'selected_layers':body.selected_layers,'algorithm_id':body.algorithm_id,'workflow_id':body.workflow_id,'arguments':body.arguments,'created_at':now(),'message':'','output_layers':[]}
             store.save_run(run)
             cancel=threading.Event()
             active[run['id']]=cancel

@@ -10,7 +10,7 @@ from shapely.ops import transform
 from shapely.strtree import STRtree
 from shapely.validation import explain_validity
 
-MAX_FEATURES = 20000
+MAX_FEATURES = 100000
 GEOD = Geod(ellps='WGS84')
 
 
@@ -74,9 +74,11 @@ def import_bytes(filename, content, source_crs):
 
 def inspect(store, layer_id):
     meta = store.get_layer(layer_id)
+    if meta.get('kind')=='raster':
+        return {**meta,'validation':{'crs_known':True,'dimensions_positive':True},'note':'statistics 为降采样估计值；分析使用原始栅格。'}
     data = store.data(layer_id)
     return {**meta, 'sample': [f['properties'] for f in data['features'][:3]],
-            'validation': {'valid_geometry': True, 'nonempty': True, 'coordinate_bounds': True},
+            'validation': {'valid_geometry': True, 'nonempty': bool(data['features']), 'coordinate_bounds': True},
             'note': '坐标范围检查不能识别 GCJ-02/BD-09 偏移；导入数据必须已确认坐标基准。'}
 
 

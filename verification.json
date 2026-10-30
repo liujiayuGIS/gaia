@@ -1,20 +1,38 @@
 {
+  "version": "0.2.0",
   "backend_tests": {
-    "passed": 27,
-    "command": ".venv/bin/python -m pytest -q"
+    "passed": 73,
+    "command": ".venv/bin/python -m pytest -q",
+    "notes": "One third-party Starlette/AnyIO deprecation warning"
   },
   "frontend_build": "passed",
-  "browser_workflow": [
-    "synthetic demo",
-    "buffer and POI count map",
-    "CSV export",
-    "API key not persisted",
-    "refresh persistence",
-    "run history",
-    "CSV upload",
-    "mobile no horizontal overflow"
+  "browser_workflow": {
+    "result": "passed",
+    "engine": "system Google Chrome via Playwright",
+    "isolated_workspace": true,
+    "checks": [
+      "analysis and new layers",
+      "manual algorithm catalog",
+      "north arrow placement and preview",
+      "actual SVG export download",
+      "natural-language attachment import",
+      "Responses protocol selection",
+      "API key not persisted",
+      "mobile no horizontal overflow",
+      "refresh persistence and history"
+    ]
+  },
+  "gis_checks": [
+    "known-area overlay contracts",
+    "boundary-inclusive counts",
+    "NoData-preserving raster calculation and NDVI",
+    "native projected GeoPackage snapshot",
+    "true-color uint8 preview",
+    "five actual cartographic export formats",
+    "DAG repeatability and cycle rejection",
+    "safe arithmetic and ZIP traversal rejection"
   ],
-  "live_provider": "not tested: user API credentials required",
-  "gis_method": "per-point WGS84 AEQD; independent ellipsoidal vertex distance check; covers boundary predicate",
-  "provider_compatibility": "GPT-5.6 Sol Chat Completions function tools explicitly use reasoning_effort=none; other model reasoning is unchanged"
+  "live_provider": "Not tested with user credentials; Responses transport, reasoning replay and call_id matching tested with mock provider.",
+  "qgis_engine": "Not installed; QGIS Processing is not yet integrated.",
+  "parity_claim": "No QGIS/ArcGIS full parity or competitor superiority claimed."
 }

@@ -58,9 +58,9 @@ class Store:
         layer_id = uuid.uuid4().hex
         data = json.dumps(collection, ensure_ascii=False, allow_nan=False)
         geometries = [shape(f['geometry']) for f in collection['features']]
-        bounds = list(unary_union(geometries).bounds)
+        bounds = list(unary_union(geometries).bounds) if geometries else [0,0,0,0]
         fields = sorted({k for f in collection['features'] for k in f.get('properties', {})})
-        meta = dict(id=layer_id, name=name[:100], count=len(geometries), bounds=bounds, fields=fields,
+        meta = dict(kind='vector', id=layer_id, name=name[:100], count=len(geometries), bounds=bounds, fields=fields,
                     geometry_types=sorted({g.geom_type for g in geometries}), crs='EPSG:4326', source=source,
                     sha256=hashlib.sha256(data.encode()).hexdigest(), created_at=now(),
                     provenance=provenance or {}, style=style or {'color': '#128a78', 'visible': True})
@@ -105,3 +105,39 @@ class Store:
     def events(self, run_id):
         with self.db() as db:
             return [json.loads(r['data']) for r in db.execute('SELECT data FROM events WHERE run_id=? ORDER BY seq', (run_id,))]
+
+    def put_object(self, kind, object_id, data):
+        with self.lock, self.db() as db:
+            db.execute('CREATE TABLE IF NOT EXISTS objects(kind TEXT,id TEXT,data TEXT,PRIMARY KEY(kind,id))')
+            db.execute('INSERT OR REPLACE INTO objects VALUES(?,?,?)',(kind,object_id,json.dumps(data,ensure_ascii=False,allow_nan=False)))
+        return data
+
+    def object(self, kind, object_id):
+        with self.db() as db:
+            db.execute('CREATE TABLE IF NOT EXISTS objects(kind TEXT,id TEXT,data TEXT,PRIMARY KEY(kind,id))')
+            row=db.execute('SELECT data FROM objects WHERE kind=? AND id=?',(kind,object_id)).fetchone()
+        if not row:
+            raise ValueError('工作区资源不存在。')
+        return json.loads(row['data'])
+
+    def objects(self, kind):
+        with self.db() as db:
+            db.execute('CREATE TABLE IF NOT EXISTS objects(kind TEXT,id TEXT,data TEXT,PRIMARY KEY(kind,id))')
+            return [json.loads(x['data']) for x in db.execute('SELECT data FROM objects WHERE kind=? ORDER BY rowid DESC',(kind,))]
+
+    def setting(self, name, default=None):
+        try:
+            return self.object('settings',name)
+        except ValueError:
+            return default
+
+    def add_raster(self, name, path, provenance=None):
+        from .formats import register_raster
+        return register_raster(self,name,path,provenance or {})
+
+    def patch_layer(self, layer_id, changes):
+        with self.lock:
+            meta=self.get_layer(layer_id);meta.update(changes)
+            with self.db() as db:
+                db.execute('UPDATE layers SET metadata=? WHERE id=?',(json.dumps(meta,ensure_ascii=False),layer_id))
+        return meta

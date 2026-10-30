@@ -1,46 +1,20 @@
-/* Set PLAYWRIGHT_MODULE and optionally CHROME_PATH for your installation. */
+/* Run against an isolated QA workspace; see README. */
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const fs=require('fs');
-const path=require('path');
-(async()=>{
-const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH||undefined,args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
-const page=await browser.newPage({viewport:{width:1440,height:960},deviceScaleFactor:1});
-const errors=[];page.on('pageerror',e=>errors.push(e.message));
-await page.goto(process.env.BASE_URL||'http://127.0.0.1:8765');
-await page.getByRole('button',{name:'载入示例',exact:true}).waitFor();
-await page.screenshot({path:'screenshots/01-empty.png'});
-await page.getByRole('button',{name:'载入示例',exact:true}).click();
-await page.getByText('示例 · 地铁站',{exact:true}).first().waitFor();
-await page.waitForTimeout(1800);
-await page.screenshot({path:'screenshots/02-demo.png'});
-await page.getByLabel('输入地理空间分析需求').fill('统计地铁站 800 米直线范围内的公园数量');
-await page.getByLabel('发送分析需求').click();
-await page.getByText('运行已结束',{exact:true}).waitFor({timeout:20000});
-if(!(await page.locator('.assistant-message').innerText()).includes('已完成'))throw new Error('Missing successful analysis');
-await page.waitForTimeout(1000);
-await page.screenshot({path:'screenshots/03-analysis.png'});
-const csv=page.locator('.table-title a').filter({hasText:'CSV'});
-const response=await page.request.get(new URL(await csv.getAttribute('href'),page.url()).href);
-if(!response.ok()||!(await response.text()).includes('poi_count'))throw new Error('CSV export failed');
-await page.getByRole('button',{name:'模型设置'}).click();
-await page.getByRole('button',{name:'连接模型',exact:false}).click();
-await page.getByLabel('API Key').fill('TEST_NEVER_PERSIST');
-await page.getByRole('button',{name:'应用设置'}).click();
-if((await page.evaluate(()=>JSON.stringify(localStorage))).includes('TEST_NEVER_PERSIST'))throw new Error('Secret persisted');
-await page.evaluate(()=>localStorage.removeItem('geoagent-preferences-v1'));
-await page.reload();await page.locator('.layer-card').first().waitFor();
-await page.getByRole('button',{name:/运行记录/}).click();
-await page.locator('.run-list>button').first().click();
-await page.getByText('运行已结束',{exact:true}).waitFor();
-await page.getByRole('button',{name:'导入地理数据',exact:true}).click();
-await page.locator('input[type=file]').setInputFiles({name:'test-poi.csv',mimeType:'text/csv',buffer:Buffer.from('name,lon,lat\n测试点,116.39,39.915')});
-await page.getByRole('button',{name:'检查并导入'}).click();
-await page.getByText('test-poi',{exact:true}).first().waitFor();
-await page.setViewportSize({width:390,height:844});await page.waitForTimeout(400);
-await page.screenshot({path:'screenshots/04-mobile.png',fullPage:true});
-const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth+2);
-if(overflow)throw new Error('Mobile horizontal overflow');
-await browser.close();
-if(errors.length)throw new Error(errors.join('\n'));
-console.log('Browser workflow passed: demo, GIS analysis, CSV export, secret handling, persistence, history, upload, mobile.');
-})().catch(e=>{console.error(e);process.exit(1)});
+(async()=>{const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH||undefined,args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});try{
+ const page=await browser.newPage({viewport:{width:1600,height:1000},deviceScaleFactor:1});page.setDefaultTimeout(15000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(process.env.BASE_URL||'http://127.0.0.1:8766');await page.getByRole('button',{name:'载入合成示例',exact:true}).click();await page.getByText('示例 · 地铁站',{exact:true}).first().waitFor();await page.waitForTimeout(900);
+ await page.getByLabel('输入空间分析需求').fill('统计地铁站 800 米直线范围内的公园数量');await page.getByLabel('发送分析需求').click();await page.locator('.message-footer').first().waitFor({timeout:30000});if(await page.locator('.error-text').count())throw new Error(await page.locator('.error-text').innerText());console.log('Analysis and layer publication passed');await page.locator('.response-text').filter({hasText:'已完成'}).waitFor();
+ await page.getByRole('button',{name:'定位所有图层'}).click();await page.waitForTimeout(650);await page.screenshot({path:'screenshots/studio-map.png'});
+ // A real manual algorithm through the same run archive and validation runtime.
+ await page.getByRole('button',{name:'分析工具',exact:false}).first().click();await page.getByLabel('检索算法').fill('计算面积');await page.locator('.algorithm-list>button').first().click();await page.getByRole('button',{name:'运行算法',exact:true}).click();await page.locator('.response-text').filter({hasText:'算法已完成'}).waitFor({timeout:20000});
+ await page.getByRole('button',{name:'制图布局',exact:true}).last().click();await page.getByLabel('指北针位置').selectOption('top-left');await page.locator('.layout-paper img').waitFor();await page.waitForFunction(()=>{const img=document.querySelector('.layout-paper img');return img?.complete&&img.naturalWidth>0});await page.waitForTimeout(600);await page.screenshot({path:'screenshots/studio-layout.png'});console.log('Layout placement passed');
+ await page.getByRole('button',{name:'导出地图',exact:true}).click();await page.getByRole('dialog').getByRole('combobox').first().selectOption('svg');const exportResponse=page.waitForResponse(r=>r.url().endsWith('/api/layout/export')&&r.request().method()==='POST');await page.getByRole('button',{name:'导出并下载'}).click();const item=await (await exportResponse).json();const r=await page.request.get(new URL(item.url,page.url()).href);if(!r.ok()||!(await r.text()).includes('<svg'))throw new Error('Map SVG export failed');
+ console.log('Actual SVG export passed');await page.getByRole('button',{name:'地图',exact:true}).click();
+ // Upload through the actual attachment input, then ask for natural-language import.
+ await page.locator('.composer-area input[type=file]').setInputFiles({name:'natural-import.csv',mimeType:'text/csv',buffer:Buffer.from('name,lon,lat\nQA,116.39,39.915')});await page.getByLabel('输入空间分析需求').fill('导入 natural-import.csv');await page.getByLabel('发送分析需求').click();await page.locator('.response-text').filter({hasText:'已导入 natural-import'}).waitFor({timeout:20000});
+ await page.getByRole('button',{name:'模型设置',exact:true}).first().click();await page.getByRole('button',{name:'连接模型',exact:false}).click();await page.getByLabel('接口协议').selectOption('responses');await page.getByLabel('API Key').fill('QA_SECRET_NOT_REAL');await page.getByRole('button',{name:'应用设置'}).click();if((await page.evaluate(()=>JSON.stringify(localStorage))).includes('QA_SECRET_NOT_REAL'))throw new Error('Secret persisted');
+ await page.setViewportSize({width:390,height:844});await page.waitForTimeout(500);if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+2))throw new Error('Mobile horizontal overflow');await page.screenshot({path:'screenshots/studio-mobile.png',fullPage:true});
+ await page.setViewportSize({width:1600,height:1000});await page.reload();await page.locator('.layer-row').first().waitFor();await page.getByRole('button',{name:'运行记录',exact:true}).click();await page.locator('.history-list>button').first().click();await page.locator('.conversation').waitFor();
+ if(errors.length)throw new Error(errors.join('\n'));console.log('Studio browser E2E passed: analysis/new layers, algorithm catalog, layout placement, actual SVG export, natural-language import, Responses selection, secret handling, persistence, mobile.');
+}finally{await browser.close()}})().catch(e=>{console.error(e);process.exit(1)});

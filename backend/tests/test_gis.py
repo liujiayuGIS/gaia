@@ -58,8 +58,8 @@ def test_typed_tools_refuse_invalid_parameters_and_unknown_tools(tmp_path):
 def test_api_full_workflow_persistence_export_and_run_audit(tmp_path):
     client=TestClient(create_app(tmp_path))
     assert client.post('/api/demo').status_code==200
-    assert len(client.get('/api/layers').json())==4
-    assert len(client.post('/api/demo').json())==4
+    assert len(client.get('/api/layers').json())==6
+    assert len(client.post('/api/demo').json())==6
     request=client.post('/api/runs',json={'message':'统计地铁站 800 米直线范围内的公园数量','session_id':'test','mode':'offline'})
     assert request.status_code==202
     rid=request.json()['id']
@@ -76,7 +76,7 @@ def test_api_full_workflow_persistence_export_and_run_audit(tmp_path):
     assert client.get(f'/api/layers/{output}/export').json()['features'][0]['properties']['poi_count']>=0
     assert 'poi_count' in client.get(f'/api/layers/{output}/export?format=csv').text
     assert 'api_key' not in client.get(f'/api/runs/{rid}/export').text
-    assert len(TestClient(create_app(tmp_path)).get('/api/layers').json())==6
+    assert len(TestClient(create_app(tmp_path)).get('/api/layers').json())==8
 
 
 def test_csv_upload_errors_and_cross_origin(tmp_path):
@@ -96,7 +96,7 @@ def test_offline_no_network_substitute_or_silent_distance(tmp_path):
         return offline_plan(registry,store,{'id':'r','message_input':text},threading.Event())
     assert '尚未实现' in run('计算地铁站 800 米步行范围')
     assert '明确' in run('统计地铁站周边公园')
-    assert len(store.layers())==4
+    assert len(store.layers())==6
 
 
 def test_restart_marks_incomplete_run(tmp_path):
@@ -124,7 +124,7 @@ def test_model_loop_uses_real_tools_and_hides_secret(tmp_path, monkeypatch):
         def __exit__(self,*args): pass
         def post(self,url,headers,json):
             seen.append(json)
-            msg={'role':'assistant','content':None,'tool_calls':[{'id':'t1','type':'function','function':{'name':'list_layers','arguments':'{}'}}]} if len(seen)==1 else {'role':'assistant','content':'已读取四个图层。'}
+            msg={'role':'assistant','content':None,'tool_calls':[{'id':'t1','type':'function','function':{'name':'list_layers','arguments':'{}'}}]} if len(seen)==1 else {'role':'assistant','content':'已读取六个图层。'}
             return httpx.Response(200,json={'choices':[{'message':msg}]},request=httpx.Request('POST',url))
     import httpx
     monkeypatch.setattr(harness.httpx,'Client',FakeClient)
@@ -153,7 +153,7 @@ def test_negative_distance_is_not_reinterpreted_as_positive(tmp_path):
     run={'id':'r','mode':'offline','message_input':'为地铁站生成 -100 米缓冲区'}
     execute_run(store,Registry(store),run,None,threading.Event())
     assert store.run('r')['status']=='failed'
-    assert len(store.layers())==4
+    assert len(store.layers())==6
 
 
 def test_dateline_buffer_is_rejected(tmp_path):

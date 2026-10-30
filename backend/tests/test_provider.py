@@ -56,15 +56,15 @@ def test_diagnostic_endpoint_sends_no_workspace_data_or_saved_key(tmp_path,monke
     seen=[]
     def respond(request):
         seen.append(json.loads(request.content))
-        return httpx.Response(200,json={'model':'gpt-5.6-sol','choices':[{'message':{'role':'assistant','content':'OK'}}]})
+        return httpx.Response(200,json={'model':'gpt-5.6-sol','status':'completed','output':[{'type':'message','role':'assistant','content':[{'type':'output_text','text':'OK'}]}]})
     original=httpx.Client
     monkeypatch.setattr('geoagent.provider.httpx.Client',lambda **kw:original(transport=httpx.MockTransport(respond),**kw))
     client=TestClient(create_app(tmp_path))
     result=client.post('/api/model/test',json={'base_url':'https://api.openai.com/v1','model':'gpt-5.6-sol','api_key':'SECRET_NOT_STORED'})
     assert result.status_code==200 and result.json()['ok']
-    assert seen[0]['messages']==[{'role':'user','content':'请只回复 OK。'}]
+    assert seen[0]['input']==[{'role':'user','content':'请只回复 OK。'}]
     assert seen[0]['tool_choice']=='none'
-    assert seen[0]['reasoning_effort']=='none'
+    assert seen[0]['reasoning']=={'effort':'medium'}
     assert client.get('/api/runs').json()==[]
     assert b'SECRET_NOT_STORED' not in (tmp_path/'workspace.sqlite3').read_bytes()
 
@@ -96,3 +96,27 @@ def test_sol_chat_function_calls_use_supported_reasoning_mode(model):
 def test_sol_compatibility_rule_does_not_disable_other_models_reasoning(model):
     payload=completion_payload({'model':model,'base_url':'https://api.openai.com/v1'},[],[{'type':'function'}])
     assert 'reasoning_effort' not in payload
+
+
+def test_responses_preserves_reasoning_items_and_tool_call_outputs(tmp_path,monkeypatch):
+    calls=[]
+    reasoning={'type':'reasoning','id':'rs_1','encrypted_content':'ENCRYPTED_OPAQUE','summary':[]}
+    function={'type':'function_call','id':'fc_1','call_id':'call_1','name':'list_layers','arguments':'{}','status':'completed'}
+    def respond(request):
+        payload=json.loads(request.content);calls.append(payload)
+        assert request.url.path=='/v1/responses'
+        if len(calls)==1:
+            output=[reasoning,function]
+        else:
+            assert reasoning in payload['input'] and function in payload['input']
+            assert any(x.get('type')=='function_call_output' and x['call_id']=='call_1' for x in payload['input'])
+            output=[{'type':'message','role':'assistant','content':[{'type':'output_text','text':'已读取工作区。'}]}]
+        return httpx.Response(200,json={'id':'resp_'+str(len(calls)),'status':'completed','output':output,'usage':{'input_tokens':10,'output_tokens':5}})
+    original=httpx.Client
+    monkeypatch.setattr('geoagent.provider.httpx.Client',lambda **kw:original(transport=httpx.MockTransport(respond),**kw))
+    store=Store(tmp_path);run={'id':'responses','mode':'model','session_id':'s','message_input':'读取图层'}
+    execute_run(store,Registry(store),run,{'base_url':'https://api.openai.com/v1','model':'gpt-5.6-sol','api_key':'SECRET_KEY','protocol':'responses','reasoning_effort':'medium'},threading.Event())
+    assert store.run('responses')['status']=='completed'
+    assert calls[0]['reasoning']=={'effort':'medium'} and calls[0]['store'] is False
+    assert 'reasoning.encrypted_content' in calls[0]['include']
+    assert 'SECRET_KEY' not in json.dumps(store.events('responses'))
