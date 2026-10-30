@@ -1,0 +1,751 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-30T17:21:48.966971+00:00",
+  "title": "Design System: GAIA",
+  "extensions": {
+    "colorMeta": {
+      "accent-default": {
+        "role": "primary",
+        "displayName": "Accent Default",
+        "tonalRamp": [
+          "oklch(15% 0.0306 188.94)",
+          "oklch(25% 0.0612 188.94)",
+          "oklch(38% 0.0918 188.94)",
+          "oklch(50% 0.0918 188.94)",
+          "oklch(62% 0.0918 188.94)",
+          "oklch(74% 0.0918 188.94)",
+          "oklch(86% 0.0514 188.94)",
+          "oklch(95% 0.0184 188.94)"
+        ],
+        "rampPurpose": "Synthesized preview ramp; not additional implementation tokens."
+      },
+      "accent-ink-default": {
+        "role": "primary",
+        "displayName": "Accent Ink Default",
+        "tonalRamp": [
+          "oklch(15% 0.0000 0.00)",
+          "oklch(25% 0.0000 0.00)",
+          "oklch(38% 0.0000 0.00)",
+          "oklch(50% 0.0000 0.00)",
+          "oklch(62% 0.0000 0.00)",
+          "oklch(74% 0.0000 0.00)",
+          "oklch(86% 0.0000 0.00)",
+          "oklch(95% 0.0000 0.00)"
+        ],
+        "rampPurpose": "Synthesized preview ramp; not additional implementation tokens."
+      },
+      "accent-ink-bright": {
+        "role": "primary",
+        "displayName": "Accent Ink Bright",
+        "tonalRamp": [
+          "oklch(15% 0.0080 248.84)",
+          "oklch(25% 0.0160 248.84)",
+          "oklch(38% 0.0240 248.84)",
+          "oklch(50% 0.0240 248.84)",
+          "oklch(62% 0.0240 248.84)",
+          "oklch(74% 0.0240 248.84)",
+          "oklch(86% 0.0134 248.84)",
+          "oklch(95% 0.0048 248.84)"
+        ],
+        "rampPurpose": "Synthesized preview ramp; not additional implementation tokens."
+      },
+      "map-ground-default": {
+        "role": "neutral",
+        "displayName": "Map Ground Default",
+        "tonalRamp": [
+          "oklch(15% 0.0022 185.27)",
+          "oklch(25% 0.0044 185.27)",
+          "oklch(38% 0.0065 185.27)",
+          "oklch(50% 0.0065 185.27)",
+          "oklch(62% 0.0065 185.27)",
+          "oklch(74% 0.0065 185.27)",
+          "oklch(86% 0.0037 185.27)",
+          "oklch(95% 0.0013 185.27)"
+        ],
+        "rampPurpose": "Synthesized preview ramp; not additional implementation tokens."
+      },
+      "workspace-light": {
+        "role": "neutral",
+        "displayName": "Workspace Light",
+        "tonalRamp": [
+          "oklch(15% 0.0011 174.48)",
+          "oklch(25% 0.0023 174.48)",
+          "oklch(38% 0.0034 174.48)",
+          "oklch(50% 0.0034 174.48)",
+          "oklch(62% 0.0034 174.48)",
+          "oklch(74% 0.0034 174.48)",
+          "oklch(86% 0.0019 174.48)",
+          "oklch(95% 0.0007 174.48)"
+        ],
+        "rampPurpose": "Synthesized preview ramp; not additional implementation tokens."
+      },
+      "pane-light": {
+        "role": "neutral",
+        "displayName": "Pane Light",
+        "tonalRamp": [
+          "oklch(15% 0.0000 0.00)",
+          "oklch(25% 0.0000 0.00)",
+          "oklch(38% 0.0000 0.00)",
+          "oklch(50% 0.0000 0.00)",
+          "oklch(62% 0.0000 0.00)",
+          "oklch(74% 0.0000 0.00)",
+          "oklch(86% 0.0000 0.00)",
+          "oklch(95% 0.0000 0.00)"
+        ],
+        "rampPurpose": "Synthesized preview ramp; not additional implementation tokens."
+      },
+      "border-light": {
+        "role": "neutral",
+        "displayName": "Border Light",
+        "tonalRamp": [
+          "oklch(15% 0.0035 174.23)",
+          "oklch(25% 0.0071 174.23)",
+          "oklch(38% 0.0106 174.23)",
+          "oklch(50% 0.0106 174.23)",
+          "oklch(62% 0.0106 174.23)",
+          "oklch(74% 0.0106 174.23)",
+          "oklch(86% 0.0059 174.23)",
+          "oklch(95% 0.0021 174.23)"
+        ],
+        "rampPurpose": "Synthesized preview ramp; not additional implementation tokens."
+      },
+      "border-soft-light": {
+        "role": "neutral",
+        "displayName": "Border Soft Light",
+        "tonalRamp": [
+          "oklch(15% 0.0020 170.44)",
+          "oklch(25% 0.0040 170.44)",
+          "oklch(38% 0.0060 170.44)",
+          "oklch(50% 0.0060 170.44)",
+          "oklch(62% 0.0060 170.44)",
+          "oklch(74% 0.0060 170.44)",
+          "oklch(86% 0.0033 170.44)",
+          "oklch(95% 0.0012 170.44)"
+        ],
+        "rampPurpose": "Synthesized preview ramp; not additional implementation tokens."
+      },
+      "ink-light": {
+        "role": "neutral",
+        "displayName": "Ink Light",
+        "tonalRamp": [
+          "oklch(15% 0.0080 174.54)",
+          "oklch(25% 0.0160 174.54)",
+          "oklch(38% 0.0241 174.54)",
+          "oklch(50% 0.0241 174.54)",
+          "oklch(62% 0.0241 174.54)",
+          "oklch(74% 0.0241 174.54)",
+          "oklch(86% 0.0135 174.54)",
+          "oklch(95% 0.0048 174.54)"
+        ],
+        "rampPurpose": "Synthesized preview ramp; not additional implementation tokens."
+      },
+      "muted-light": {
+        "role": "neutral",
+        "displayName": "Muted Light",
+        "tonalRamp": [
+          "oklch(15% 0.0071 170.90)",
+          "oklch(25% 0.0142 170.90)",
+          "oklch(38% 0.0212 170.90)",
+          "oklch(50% 0.0212 170.90)",
+          "oklch(62% 0.0212 170.90)",
+          "oklch(74% 0.0212 170.90)",
+          "oklch(86% 0.0119 170.90)",
+          "oklch(95% 0.0042 170.90)"
+        ],
+        "rampPurpose": "Synthesized preview ramp; not additional implementation tokens."
+      },
+      "input-light": {
+        "role": "neutral",
+        "displayName": "Input Light",
+        "tonalRamp": [
+          "oklch(15% 0.0006 145.56)",
+          "oklch(25% 0.0011 145.56)",
+          "oklch(38% 0.0017 145.56)",
+          "oklch(50% 0.0017 145.56)",
+          "oklch(62% 0.0017 145.56)",
+          "oklch(74% 0.0017 145.56)",
+          "oklch(86% 0.0009 145.56)",
+          "oklch(95% 0.0003 145.56)"
+        ],
+        "rampPurpose": "Synthesized preview ramp; not additional implementation tokens."
+      },
+      "control-light": {
+        "role": "neutral",
+        "displayName": "Control Light",
+        "tonalRamp": [
+          "oklch(15% 0.0008 165.08)",
+          "oklch(25% 0.0017 165.08)",
+          "oklch(38% 0.0025 165.08)",
+          "oklch(50% 0.0025 165.08)",
+          "oklch(62% 0.0025 165.08)",
+          "oklch(74% 0.0025 165.08)",
+          "oklch(86% 0.0014 165.08)",
+          "oklch(95% 0.0005 165.08)"
+        ],
+        "rampPurpose": "Synthesized preview ramp; not additional implementation tokens."
+      },
+      "hover-light": {
+        "role": "neutral",
+        "displayName": "Hover Light",
+        "tonalRamp": [
+          "oklch(15% 0.0020 170.45)",
+          "oklch(25% 0.0040 170.45)",
+          "oklch(38% 0.0059 170.45)",
+          "oklch(50% 0.0059 170.45)",
+          "oklch(62% 0.0059 170.45)",
+          "oklch(74% 0.0059 170.45)",
+          "oklch(86% 0.0033 170.45)",
+          "oklch(95% 0.0012 170.45)"
+        ],
+        "rampPurpose": "Synthesized preview ramp; not additional implementation tokens."
+      },
+      "paper-ground-light": {
+        "role": "neutral",
+        "displayName": "Paper Ground Light",
+        "tonalRamp": [
+          "oklch(15% 0.0025 164.92)",
+          "oklch(25% 0.0051 164.92)",
+          "oklch(38% 0.0076 164.92)",
+          "oklch(50% 0.0076 164.92)",
+          "oklch(62% 0.0076 164.92)",
+          "oklch(74% 0.0076 164.92)",
+          "oklch(86% 0.0043 164.92)",
+          "oklch(95% 0.0015 164.92)"
+        ],
+        "rampPurpose": "Synthesized preview ramp; not additional implementation tokens."
+      },
+      "danger-light": {
+        "role": "semantic",
+        "displayName": "Danger Light",
+        "tonalRamp": [
+          "oklch(15% 0.0476 30.35)",
+          "oklch(25% 0.0953 30.35)",
+          "oklch(38% 0.1429 30.35)",
+          "oklch(50% 0.1429 30.35)",
+          "oklch(62% 0.1429 30.35)",
+          "oklch(74% 0.1429 30.35)",
+          "oklch(86% 0.0800 30.35)",
+          "oklch(95% 0.0286 30.35)"
+        ],
+        "rampPurpose": "Synthesized preview ramp; not additional implementation tokens."
+      },
+      "workspace-dark": {
+        "role": "neutral",
+        "displayName": "Workspace Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0055 240.86)",
+          "oklch(25% 0.0110 240.86)",
+          "oklch(38% 0.0166 240.86)",
+          "oklch(50% 0.0166 240.86)",
+          "oklch(62% 0.0166 240.86)",
+          "oklch(74% 0.0166 240.86)",
+          "oklch(86% 0.0093 240.86)",
+          "oklch(95% 0.0033 240.86)"
+        ],
+        "rampPurpose": "Synthesized preview ramp; not additional implementation tokens."
+      },
+      "pane-dark": {
+        "role": "neutral",
+        "displayName": "Pane Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0071 240.06)",
+          "oklch(25% 0.0141 240.06)",
+          "oklch(38% 0.0212 240.06)",
+          "oklch(50% 0.0212 240.06)",
+          "oklch(62% 0.0212 240.06)",
+          "oklch(74% 0.0212 240.06)",
+          "oklch(86% 0.0119 240.06)",
+          "oklch(95% 0.0042 240.06)"
+        ],
+        "rampPurpose": "Synthesized preview ramp; not additional implementation tokens."
+      },
+      "border-dark": {
+        "role": "neutral",
+        "displayName": "Border Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0082 228.03)",
+          "oklch(25% 0.0164 228.03)",
+          "oklch(38% 0.0246 228.03)",
+          "oklch(50% 0.0246 228.03)",
+          "oklch(62% 0.0246 228.03)",
+          "oklch(74% 0.0246 228.03)",
+          "oklch(86% 0.0138 228.03)",
+          "oklch(95% 0.0049 228.03)"
+        ],
+        "rampPurpose": "Synthesized preview ramp; not additional implementation tokens."
+      },
+      "border-soft-dark": {
+        "role": "neutral",
+        "displayName": "Border Soft Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0085 232.96)",
+          "oklch(25% 0.0171 232.96)",
+          "oklch(38% 0.0256 232.96)",
+          "oklch(50% 0.0256 232.96)",
+          "oklch(62% 0.0256 232.96)",
+          "oklch(74% 0.0256 232.96)",
+          "oklch(86% 0.0143 232.96)",
+          "oklch(95% 0.0051 232.96)"
+        ],
+        "rampPurpose": "Synthesized preview ramp; not additional implementation tokens."
+      },
+      "ink-dark": {
+        "role": "neutral",
+        "displayName": "Ink Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0028 168.75)",
+          "oklch(25% 0.0056 168.75)",
+          "oklch(38% 0.0084 168.75)",
+          "oklch(50% 0.0084 168.75)",
+          "oklch(62% 0.0084 168.75)",
+          "oklch(74% 0.0084 168.75)",
+          "oklch(86% 0.0047 168.75)",
+          "oklch(95% 0.0017 168.75)"
+        ],
+        "rampPurpose": "Synthesized preview ramp; not additional implementation tokens."
+      },
+      "muted-dark": {
+        "role": "neutral",
+        "displayName": "Muted Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0070 177.28)",
+          "oklch(25% 0.0140 177.28)",
+          "oklch(38% 0.0210 177.28)",
+          "oklch(50% 0.0210 177.28)",
+          "oklch(62% 0.0210 177.28)",
+          "oklch(74% 0.0210 177.28)",
+          "oklch(86% 0.0117 177.28)",
+          "oklch(95% 0.0042 177.28)"
+        ],
+        "rampPurpose": "Synthesized preview ramp; not additional implementation tokens."
+      },
+      "input-dark": {
+        "role": "neutral",
+        "displayName": "Input Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0072 240.23)",
+          "oklch(25% 0.0144 240.23)",
+          "oklch(38% 0.0216 240.23)",
+          "oklch(50% 0.0216 240.23)",
+          "oklch(62% 0.0216 240.23)",
+          "oklch(74% 0.0216 240.23)",
+          "oklch(86% 0.0121 240.23)",
+          "oklch(95% 0.0043 240.23)"
+        ],
+        "rampPurpose": "Synthesized preview ramp; not additional implementation tokens."
+      },
+      "control-dark": {
+        "role": "neutral",
+        "displayName": "Control Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0084 230.06)",
+          "oklch(25% 0.0168 230.06)",
+          "oklch(38% 0.0252 230.06)",
+          "oklch(50% 0.0252 230.06)",
+          "oklch(62% 0.0252 230.06)",
+          "oklch(74% 0.0252 230.06)",
+          "oklch(86% 0.0141 230.06)",
+          "oklch(95% 0.0050 230.06)"
+        ],
+        "rampPurpose": "Synthesized preview ramp; not additional implementation tokens."
+      },
+      "hover-dark": {
+        "role": "neutral",
+        "displayName": "Hover Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0089 227.02)",
+          "oklch(25% 0.0178 227.02)",
+          "oklch(38% 0.0267 227.02)",
+          "oklch(50% 0.0267 227.02)",
+          "oklch(62% 0.0267 227.02)",
+          "oklch(74% 0.0267 227.02)",
+          "oklch(86% 0.0150 227.02)",
+          "oklch(95% 0.0053 227.02)"
+        ],
+        "rampPurpose": "Synthesized preview ramp; not additional implementation tokens."
+      },
+      "paper-ground-dark": {
+        "role": "neutral",
+        "displayName": "Paper Ground Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0065 239.14)",
+          "oklch(25% 0.0131 239.14)",
+          "oklch(38% 0.0196 239.14)",
+          "oklch(50% 0.0196 239.14)",
+          "oklch(62% 0.0196 239.14)",
+          "oklch(74% 0.0196 239.14)",
+          "oklch(86% 0.0110 239.14)",
+          "oklch(95% 0.0039 239.14)"
+        ],
+        "rampPurpose": "Synthesized preview ramp; not additional implementation tokens."
+      },
+      "danger-dark": {
+        "role": "semantic",
+        "displayName": "Danger Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0332 27.17)",
+          "oklch(25% 0.0664 27.17)",
+          "oklch(38% 0.0996 27.17)",
+          "oklch(50% 0.0996 27.17)",
+          "oklch(62% 0.0996 27.17)",
+          "oklch(74% 0.0996 27.17)",
+          "oklch(86% 0.0558 27.17)",
+          "oklch(95% 0.0199 27.17)"
+        ],
+        "rampPurpose": "Synthesized preview ramp; not additional implementation tokens."
+      },
+      "print-paper": {
+        "role": "neutral",
+        "displayName": "Print Paper",
+        "tonalRamp": [
+          "oklch(15% 0.0000 0.00)",
+          "oklch(25% 0.0000 0.00)",
+          "oklch(38% 0.0000 0.00)",
+          "oklch(50% 0.0000 0.00)",
+          "oklch(62% 0.0000 0.00)",
+          "oklch(74% 0.0000 0.00)",
+          "oklch(86% 0.0000 0.00)",
+          "oklch(95% 0.0000 0.00)"
+        ],
+        "rampPurpose": "Synthesized preview ramp; not additional implementation tokens."
+      }
+    },
+    "typographyMeta": {
+      "brand": {
+        "displayName": "Brand",
+        "purpose": "Application identity label; not a system display face."
+      },
+      "dialog-title": {
+        "displayName": "Dialog Title",
+        "purpose": "Native dialog headings."
+      },
+      "welcome-title": {
+        "displayName": "Welcome Title",
+        "purpose": "Assistant welcome heading."
+      },
+      "assistant-title": {
+        "displayName": "Assistant Title",
+        "purpose": "Independent assistant header."
+      },
+      "pane-title": {
+        "displayName": "Pane Title",
+        "purpose": "Contextual pane headings."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Operational body text."
+      },
+      "assistant-body": {
+        "displayName": "Assistant Body",
+        "purpose": "Readable task responses."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Compact field and control labels."
+      },
+      "metadata": {
+        "displayName": "Metadata",
+        "purpose": "Subordinate context and metadata."
+      },
+      "code": {
+        "displayName": "Code",
+        "purpose": "Editable scientific/custom code."
+      }
+    },
+    "shadows": [
+      {
+        "name": "caption",
+        "value": "0 1px 3px #0001",
+        "purpose": "Map caption."
+      },
+      {
+        "name": "selected-segment",
+        "value": "0 1px 3px #0002",
+        "purpose": "Document and mobile selected segment."
+      },
+      {
+        "name": "print-sheet",
+        "value": "0 2px 7px #0003",
+        "purpose": "White paper in the print editor."
+      },
+      {
+        "name": "toast",
+        "value": "0 3px 14px #0003",
+        "purpose": "Transient feedback."
+      },
+      {
+        "name": "modal",
+        "value": "0 10px 40px #0003",
+        "purpose": "Native dialog."
+      },
+      {
+        "name": "composer-focus",
+        "value": "0 0 0 2px color-mix(in srgb, var(--accent) 12%, transparent)",
+        "purpose": "Composer focus-within feedback."
+      }
+    ],
+    "motion": [
+      {
+        "name": "loading-rotation",
+        "value": "spin 1s linear infinite",
+        "purpose": "Busy indicator rotation; disabled by reduced-motion preference."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "animation: none; scroll-behavior: auto !important",
+        "purpose": "Existing reduced-motion response; no generic transition system is defined."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "wide-desktop",
+        "value": "1600px",
+        "query": "(min-width:1600px)"
+      },
+      {
+        "name": "compact-desktop",
+        "value": "1150px",
+        "query": "(max-width:1150px) and (min-width:921px)"
+      },
+      {
+        "name": "single-pane",
+        "value": "920px",
+        "query": "(max-width:920px)"
+      },
+      {
+        "name": "compact-attribute-dock",
+        "value": "800px",
+        "query": "(max-width:800px)"
+      }
+    ],
+    "focus": {
+      "value": "outline: 2px solid var(--accent); outline-offset: 2px",
+      "purpose": "Shared keyboard focus on controls and focusable surfaces."
+    },
+    "backdrop": {
+      "value": "#10182066",
+      "purpose": "Native modal backdrop."
+    },
+    "themeBindings": {
+      "light": {
+        "selector": ".workbench",
+        "colorScheme": "light",
+        "references": {
+          "--ground": "{colors.workspace-light}",
+          "--pane": "{colors.pane-light}",
+          "--border": "{colors.border-light}",
+          "--border-soft": "{colors.border-soft-light}",
+          "--ink": "{colors.ink-light}",
+          "--muted": "{colors.muted-light}",
+          "--input": "{colors.input-light}",
+          "--control": "{colors.control-light}",
+          "--hover": "{colors.hover-light}",
+          "--paper-ground": "{colors.paper-ground-light}",
+          "--danger": "{colors.danger-light}"
+        }
+      },
+      "dark": {
+        "selector": ".workbench[data-theme=dark]",
+        "colorScheme": "dark",
+        "references": {
+          "--ground": "{colors.workspace-dark}",
+          "--pane": "{colors.pane-dark}",
+          "--border": "{colors.border-dark}",
+          "--border-soft": "{colors.border-soft-dark}",
+          "--ink": "{colors.ink-dark}",
+          "--muted": "{colors.muted-dark}",
+          "--input": "{colors.input-dark}",
+          "--control": "{colors.control-dark}",
+          "--hover": "{colors.hover-dark}",
+          "--paper-ground": "{colors.paper-ground-dark}",
+          "--danger": "{colors.danger-dark}"
+        }
+      }
+    },
+    "dynamicAppearance": {
+      "defaultReferences": {
+        "--accent": "{colors.accent-default}",
+        "--map-ground": "{colors.map-ground-default}"
+      },
+      "accentInk": "Convert the chosen hex accent to linear sRGB, then relative luminance L=0.2126R+0.7152G+0.0722B. If L > 0.38, use {colors.accent-ink-bright}; otherwise use {colors.accent-ink-default}.",
+      "accentUi": {
+        "dark": "color-mix(in srgb, <chosen-accent> 65%, white)",
+        "light-bright-accent": "color-mix(in srgb, <chosen-accent> 50%, #17302a)",
+        "light-other-accent": "<chosen-accent>"
+      },
+      "link": "var(--accent-ui, var(--accent))",
+      "selection": {
+        "light": "color-mix(in srgb, var(--accent) 13%, var(--pane))",
+        "dark": "color-mix(in srgb, var(--accent) 20%, var(--pane))"
+      },
+      "independence": "Appearance settings do not recolor map features or print paper; map background is separately configurable.",
+      "persistence": "Appearance settings persist in browser storage."
+    },
+    "composition": {
+      "scope": "Current workbench surface; see .impeccable/briefs/workbench.md.",
+      "desktop": "250px minmax(280px,1fr) 390px; 12px gaps; 72px header; 24px status strip.",
+      "wideDesktop": "270px minmax(360px,1fr) 420px; 14px gaps; 16px workspace side padding.",
+      "compactDesktop": "220px minmax(240px,1fr) 330px; 9px gaps and side padding.",
+      "narrow": "Single full-width pane with explicit Data & Tools / Map & Layout / GAIA Assistant choices; 62px header and 35px pane navigation.",
+      "leftContext": "42px navigation row above the contextual pane.",
+      "document": "Central document and independent right assistant span both grid rows.",
+      "scrolling": "Body is locked; pane content and document regions scroll internally."
+    },
+    "imageProvenance": {
+      "path": "frontend/public/gaia-icon.png",
+      "sidecar": "frontend/public/gaia-icon.png.json",
+      "origin": "User supplied original brand image, codex-clipboard-b098bbba-eff1-4eda-b222-1eb5b254f928.png, 2026-10-31.",
+      "authorization": "Copied unchanged with explicit instruction to use as GAIA application icon.",
+      "role": "Application icon; navy-and-mint orbital G.",
+      "presentation": "42px square desktop, 36px square narrow; unchanged source image."
+    },
+    "sourceEvidence": {
+      "authority": "Final active CSS cascade and React components; code-led, user-pinned GAIA replacement; no approved comp.",
+      "files": [
+        {
+          "path": "frontend/src/style.css",
+          "sha256": "05c19ddb555635e3a848ea48aea4d75be9ae44ece759016f9a6f4badd369dcc1"
+        },
+        {
+          "path": "frontend/src/ProWorkbench.jsx",
+          "sha256": "f32239f3b055b25682d1fed6716d2dd370ca3ca4ed899c9c3a07e92f71d191e0"
+        },
+        {
+          "path": "frontend/src/LayoutEditor.jsx",
+          "sha256": "fb3f0cae2c0b3bebe54b6aa1e8259ab5e11b6d53b066f53ee7c9ad1a93ac11da"
+        },
+        {
+          "path": "frontend/src/shared.jsx",
+          "sha256": "4e44e6cc02a20ab2c65974ade36ffeebd2ed0f01bcb52589b105d53717ad782d"
+        },
+        {
+          "path": "frontend/public/gaia-icon.png.json",
+          "sha256": "3aa7212ad3c1e79efa22dc5d8756761b951969a05a2d02e80479daede5af9839"
+        }
+      ],
+      "screenshots": [
+        ".impeccable/review/desktop.png",
+        ".impeccable/review/algorithm.png",
+        ".impeccable/review/dark.png",
+        ".impeccable/review/layout.png",
+        ".impeccable/review/mobile.png",
+        ".impeccable/review/mobile-pane.png",
+        ".impeccable/review/mobile-assistant.png",
+        ".impeccable/review/dark-error.png"
+      ],
+      "notCanonized": [
+        "Inactive legacy ribbon selectors from the superseded vendor reproduction.",
+        "Old schematic thumbnail preview colors; not active GAIA palette tokens."
+      ]
+    }
+  },
+  "components": [
+    {
+      "name": "Primary action",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The active accent and computed foreground identify the committed action.",
+      "html": "<button class=\"ds-primary\">应用设置</button>",
+      "css": ".ds-primary{font:13px/1.5 'Segoe UI',-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;background:var(--accent,#087f79);color:var(--accent-ink,#ffffff);border:1px solid var(--accent,#087f79);border-radius:8px;min-height:32px;padding:5px 9px;font-weight:600;cursor:pointer;}.ds-primary:hover:not(:disabled){filter:brightness(.93);}.ds-primary:focus-visible{outline:2px solid var(--accent,#087f79);outline-offset:2px;}.ds-primary:disabled{opacity:.48;cursor:default;}"
+    },
+    {
+      "name": "Secondary action",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "A quiet bordered action within a pane.",
+      "html": "<button class=\"ds-secondary\">恢复默认</button>",
+      "css": ".ds-secondary{font:13px/1.5 'Segoe UI',-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;color:var(--ink,#243530);background:var(--control,#f5f7f6);border:1px solid var(--border,#cbd4d1);border-radius:8px;min-height:32px;padding:5px 9px;cursor:pointer;}.ds-secondary:hover:not(:disabled){background:var(--hover,#edf2f0);}.ds-secondary:focus-visible{outline:2px solid var(--accent,#087f79);outline-offset:2px;}.ds-secondary:disabled{opacity:.48;cursor:default;}"
+    },
+    {
+      "name": "Icon action",
+      "kind": "button",
+      "refersTo": "button-icon",
+      "description": "Transparent compact command with an inline SVG and accessible name.",
+      "html": "<button class=\"ds-icon\" aria-label=\"关闭弹窗\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M18 6 6 18M6 6l12 12\"/></svg></button>",
+      "css": ".ds-icon{font:13px/1.5 'Segoe UI',-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;display:inline-flex;align-items:center;justify-content:center;color:var(--ink,#243530);background:transparent;border:1px solid transparent;border-radius:8px;min-height:24px;padding:4px;cursor:pointer;}.ds-icon:hover{background:var(--hover,#edf2f0);}.ds-icon:focus-visible{outline:2px solid var(--accent,#087f79);outline-offset:2px;}"
+    },
+    {
+      "name": "Labeled field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Theme-bound field with a compact label and clear focus.",
+      "html": "<label class=\"ds-field-label\">输出数据名称<input class=\"ds-field\" value=\"GAIA 验收 · 质心\"/></label>",
+      "css": ".ds-field-label{font:13px/1.5 'Segoe UI',-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;display:flex;flex-direction:column;gap:5px;font-size:11px;color:var(--ink,#243530);}.ds-field{font:13px/1.5 'Segoe UI',-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;min-width:0;min-height:33px;padding:5px 7px;color:var(--ink,#243530);background:var(--input,#fbfcfb);border:1px solid var(--border,#cbd4d1);border-radius:7px;}.ds-field:focus-visible{outline:2px solid var(--accent,#087f79);outline-offset:2px;}"
+    },
+    {
+      "name": "Document switch",
+      "kind": "nav",
+      "refersTo": "switch",
+      "description": "The restrained map/layout segmented context switch.",
+      "html": "<nav class=\"ds-switch\" aria-label=\"文档\"><button class=\"ds-switch-item ds-selected\">地图</button><button class=\"ds-switch-item\">出图布局</button></nav>",
+      "css": ".ds-switch{font:13px/1.5 'Segoe UI',-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;display:inline-flex;align-items:center;gap:3px;height:30px;padding:3px;background:var(--ground,#f1f4f3);border-radius:8px;}.ds-switch-item{font:13px/1.5 'Segoe UI',-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;font-size:11px;font-weight:500;min-height:24px;padding:2px 12px;background:transparent;color:var(--ink,#243530);border:0;border-radius:6px;cursor:pointer;}.ds-switch-item.ds-selected{background:var(--pane,#ffffff);box-shadow:0 1px 3px #0002;color:var(--accent-ui,var(--accent,#087f79));font-weight:600;}.ds-switch-item:hover{background:var(--hover,#edf2f0);}.ds-switch-item:focus-visible{outline:2px solid var(--accent,#087f79);outline-offset:2px;}"
+    },
+    {
+      "name": "Context navigation",
+      "kind": "nav",
+      "refersTo": "context-nav",
+      "description": "Data/tool context changes stay local to the left pane.",
+      "html": "<nav class=\"ds-context-nav\" aria-label=\"工作区面板\"><button class=\"ds-context-item ds-current\">数据</button><button class=\"ds-context-item\">工具</button><button class=\"ds-context-item\">格式</button><button class=\"ds-context-item\">目录</button></nav>",
+      "css": ".ds-context-nav{font:13px/1.5 'Segoe UI',-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;display:flex;gap:3px;height:42px;padding:5px 6px;background:var(--pane,#ffffff);border:1px solid var(--border,#cbd4d1);border-bottom:0;border-radius:13px 13px 0 0;}.ds-context-item{font:13px/1.5 'Segoe UI',-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;flex:1;min-width:0;min-height:30px;padding:4px 3px;font-size:11px;background:transparent;color:var(--ink,#243530);border:0;border-radius:6px;cursor:pointer;}.ds-context-item.ds-current{background:var(--selection,color-mix(in srgb,var(--accent,#087f79) 13%,var(--pane,#ffffff)));color:var(--accent-ui,var(--accent,#087f79));font-weight:600;}.ds-context-item:hover{background:var(--hover,#edf2f0);}.ds-context-item:focus-visible{outline:2px solid var(--accent,#087f79);outline-offset:2px;}"
+    },
+    {
+      "name": "Working pane",
+      "kind": "card",
+      "refersTo": "pane",
+      "description": "Finely bordered, flat operational surface.",
+      "html": "<section class=\"ds-pane\"><h2 class=\"ds-pane-title\">GAIA 助手</h2><p class=\"ds-pane-copy\">导入数据，告诉 GAIA 你想分析什么。</p></section>",
+      "css": ".ds-pane{font:13px/1.5 'Segoe UI',-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;color:var(--ink,#243530);background:var(--pane,#ffffff);border:1px solid var(--border,#cbd4d1);border-radius:13px;overflow:hidden;}.ds-pane-title{display:flex;align-items:center;height:46px;padding:0 16px;margin:0;border-bottom:1px solid var(--border-soft,#e5eae8);font-size:15px;font-weight:600;}.ds-pane-copy{font-size:12px;line-height:1.9;color:var(--muted,#63736d);margin:18px 16px;}"
+    },
+    {
+      "name": "Assistant composer",
+      "kind": "custom",
+      "refersTo": "assistant-composer",
+      "description": "Bound-layer context, open task entry and a compact action remain one surface.",
+      "html": "<form class=\"ds-composer\"><div class=\"ds-composer-context\">雷尼尔山 DEM · USGS 3DEP</div><textarea class=\"ds-composer-text\" aria-label=\"自然语言任务\" placeholder=\"向 GAIA 描述你的地理问题…\"></textarea><button class=\"ds-composer-send\" type=\"button\">发送任务</button></form>",
+      "css": ".ds-composer{font:13px/1.5 'Segoe UI',-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;display:flex;flex-direction:column;align-items:flex-start;padding:11px;border:1px solid var(--border,#cbd4d1);border-radius:12px;background:var(--input,#fbfcfb);}.ds-composer:focus-within{border-color:var(--accent-ui,var(--accent,#087f79));box-shadow:0 0 0 2px color-mix(in srgb,var(--accent,#087f79) 12%,transparent);}.ds-composer-context{font-size:10px;color:var(--muted,#63736d);padding-bottom:7px;border-bottom:1px solid var(--border-soft,#e5eae8);width:100%;}.ds-composer-text{font:13px/1.5 'Segoe UI',-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;font-size:12px;color:var(--ink,#243530);width:100%;padding:9px 1px;min-height:100px;resize:vertical;border:0;outline:none;background:transparent;}.ds-composer-send{font:13px/1.5 'Segoe UI',-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;align-self:flex-end;font-size:11px;font-weight:600;min-height:30px;padding:4px 10px;color:var(--accent-ink,#ffffff);background:var(--accent,#087f79);border:1px solid var(--accent,#087f79);border-radius:8px;cursor:pointer;}.ds-composer-send:hover:not(:disabled){filter:brightness(.93);}.ds-composer-send:focus-visible{outline:2px solid var(--accent,#087f79);outline-offset:2px;}.ds-composer-send:disabled{opacity:.48;cursor:default;}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The GAIA Workspace",
+    "overview": "GAIA uses its supplied navy-and-mint orbital G identity inside a quiet, rounded GIS workspace. Neutral daylight and slate surfaces support precise controls, readable data and a central map or print document. The confirmed direction replaces the earlier vendor imitation with GAIA's own identity.\n\nThe interface is compact and operational. Boundaries are fine strokes; selection is a restrained tint; segmented controls change context without becoming a ribbon. The desktop assistant remains an independent surface at the right while contextual tools occupy the left.",
+    "keyCharacteristics": [
+      "User-supplied orbital G identity, preserved unchanged.",
+      "Daylight and slate themes with a user-configurable accent.",
+      "Rounded, finely bordered operational surfaces.",
+      "Concentrated map/document workspace with an independent assistant.",
+      "Explicit full-width pane navigation on narrow screens."
+    ],
+    "rules": [
+      {
+        "name": "The Independent Color Rule",
+        "body": "Changing the workspace accent must not recolor geographic symbology or the white print page.",
+        "section": "colors"
+      },
+      {
+        "name": "The Context Rule",
+        "body": "On desktop, data, tools, formatting and catalog change the left context; they do not replace the assistant at the right.",
+        "section": "layout"
+      },
+      {
+        "name": "The Quiet Surface Rule",
+        "body": "Use borders and tonal separation for workspace panes; reserve shadows for the print sheet, selected segments and overlays.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do preserve the supplied orbital G image and its adjacent provenance file.",
+      "Do bind reusable surfaces to the active theme variables and use the derived accent color for small links and selected labels.",
+      "Do keep the desktop assistant separate and use the three explicit pane choices at narrow widths.",
+      "Do retain horizontal native checkbox rows and clear separation between output labels and fields.",
+      "Do keep print paper white and map styling independent of workspace appearance.",
+      "Do preserve visible keyboard focus, native dialog behavior and reduced-motion handling."
+    ],
+    "donts": [
+      "Don't restore the rejected ArcGIS Pro imitation or its vendor-style ribbon.",
+      "Don't use brand artwork as a recolorable workspace accent.",
+      "Don't squeeze the three desktop columns into a narrow viewport.",
+      "Don't turn settings, tool forms or the catalog into replacements for the desktop conversation.",
+      "Don't add decorative glass, glow or hard offset shadows to the operational surfaces."
+    ]
+  }
+}

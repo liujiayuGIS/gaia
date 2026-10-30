@@ -1,0 +1,12 @@
+{
+  "errors": [],
+  "checks": [
+    "persistent-assistant",
+    "native-algorithm",
+    "theme-persistence",
+    "legend-bounds",
+    "layout-drag-properties",
+    "dialog-escape",
+    "mobile-no-overflow"
+  ]
+}

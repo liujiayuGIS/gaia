@@ -19,6 +19,7 @@ from .gis import import_bytes
 
 VECTOR_SUFFIXES={'.geojson','.json','.csv','.gpkg','.shp','.kml','.gml','.fgb','.parquet','.geojsonl','.dxf','.gpx','.tab','.mif'}
 RASTER_SUFFIXES={'.tif','.tiff','.img','.asc','.jp2','.png','.jpg','.jpeg','.bil','.dem','.grd'}
+PICTURE_SUFFIXES={'.svg'}
 MAX_UPLOAD=250*1024*1024
 
 
@@ -58,7 +59,7 @@ def stage_files(store, files):
     gdbs=[x for x in folder.rglob('*') if x.is_dir() and x.suffix.lower()=='.gdb']
     candidates.extend(gdbs)
     for path in folder.rglob('*'):
-        if path.is_file() and not path.name.startswith('._') and '__MACOSX' not in path.parts and path.suffix.lower() in VECTOR_SUFFIXES|RASTER_SUFFIXES and not any(x in path.parents for x in gdbs):
+        if path.is_file() and not path.name.startswith('._') and '__MACOSX' not in path.parts and path.suffix.lower() in VECTOR_SUFFIXES|RASTER_SUFFIXES|PICTURE_SUFFIXES and not any(x in path.parents for x in gdbs):
             if path.suffix.lower()=='.json':
                 try:
                     if json.loads(path.read_text(encoding='utf-8-sig')).get('type')!='FeatureCollection':continue
@@ -67,13 +68,13 @@ def stage_files(store, files):
     resources=[]
     for p in candidates:
         relative=str(p.relative_to(folder))
-        kind='raster' if p.suffix.lower() in RASTER_SUFFIXES else 'vector'
+        kind='picture' if p.suffix.lower() in PICTURE_SUFFIXES else 'raster' if p.suffix.lower() in RASTER_SUFFIXES else 'vector'
         info={'path':relative,'kind':kind}
         try:
             if kind=='raster':
                 with rasterio.open(p) as src:
                     info.update(crs=str(src.crs) if src.crs else None,width=src.width,height=src.height,bands=src.count)
-            elif p.suffix.lower() not in ('.json','.csv','.parquet','.geojsonl'):
+            elif kind=='vector' and p.suffix.lower() not in ('.json','.csv','.parquet','.geojsonl'):
                 info['sublayers']=[str(x[0]) for x in pyogrio.list_layers(p)]
         except Exception:
             info['note']='需在导入时检查坐标系及驱动。'
@@ -95,6 +96,7 @@ def import_asset(store, asset_id, resource=None, source_crs=None, sublayer=None,
     item=choices[0]
     path=store.root/'inbox'/asset_id/item['path']
     prov={'run_id':run_id,'asset_id':asset_id,'resource':item['path'],'sublayer':sublayer}
+    if item['kind']=='picture':raise ValueError('图片资源请通过布局插入。')
     if item['kind']=='raster':
         with rasterio.open(path) as src:
             if not src.crs and not source_crs:

@@ -75,7 +75,8 @@ class Store:
     def style_layer(self, layer_id, **style):
         with self.lock:
             meta = self.get_layer(layer_id)
-            meta['style'].update(style)
+            if meta.get('qgis_style_path') and any(k in style for k in ('color','field','labels')):meta.pop('qgis_style_path',None)
+            meta['style'].update({k:v for k,v in style.items() if v is not None or k=='field'})
             with self.db() as db:
                 db.execute('UPDATE layers SET metadata=? WHERE id=?', (json.dumps(meta, ensure_ascii=False), layer_id))
         return meta

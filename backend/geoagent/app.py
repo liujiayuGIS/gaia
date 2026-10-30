@@ -31,6 +31,12 @@ class ChatRequest(BaseModel):
     protocol: str='auto'
     reasoning_effort: str='medium'
     algorithm_id: str | None=None
+    code: str | None=Field(default=None,max_length=30000)
+    plugin_id: str='python'
+    inputs: dict[str,str]=Field(default_factory=dict)
+    save_as: str | None=None
+    recipe_id: str | None=None
+    output_name: str | None=Field(default=None,max_length=100)
     workflow_id: str | None=None
     arguments: dict=Field(default_factory=dict)
 
@@ -51,7 +57,7 @@ class StyleRequest(BaseModel):
 
 
 def create_app(workspace=None):
-    app=FastAPI(title='GeoAgent Local',version='0.2.0')
+    app=FastAPI(title='GeoAgent Local',version='0.3.0')
     app.add_middleware(TrustedHostMiddleware,allowed_hosts=['127.0.0.1','localhost','testserver','[::1]'])
     store=Store(workspace or os.environ.get('GEOAGENT_WORKSPACE',ROOT/'.geoagent'))
     registry=Registry(store)
@@ -73,7 +79,7 @@ def create_app(workspace=None):
 
     @app.get('/api/health')
     def health():
-        return {'ok':True,'version':'0.2.0','model_configured':bool(os.environ.get('GIS_LLM_API_KEY')),'tools':list(registry.tools),'limits':{'upload_mb':250,'features':100000,'raster_analysis_pixels':16000000}}
+        return {'ok':True,'version':'0.3.0','model_configured':bool(os.environ.get('GIS_LLM_API_KEY')),'tools':list(registry.tools),'limits':{'upload_mb':250,'features':100000,'raster_analysis_pixels':16000000}}
 
     @app.post('/api/model/test')
     def model_test(body: ConnectionRequest):
@@ -93,8 +99,86 @@ def create_app(workspace=None):
 
     @app.get('/api/capabilities')
     def capabilities():
-        return {'algorithms':algorithms.CATALOG,'formats':formats.format_catalog(),'protocols':['responses','chat_completions'],
-                'map_exports':['png','jpeg','tiff','svg','pdf'],'qgis_engine':'not installed' if not formats.shutil.which('qgis_process') else 'detected'}
+        from .plugins import PluginManager
+        plugins=PluginManager(store)
+        return {'algorithms':plugins.algorithms(),'plugins':plugins.manifests(),'formats':formats.format_catalog(),'protocols':['responses','chat_completions'],
+                'map_exports':['png','jpeg','tiff','svg','pdf'],'cartographic_templates':['standard','choropleth','terrain'],'qgis_engine':next((p.get('version','not available') for p in plugins.manifests() if p['id']=='qgis' and p.get('available')),'not available')}
+
+    @app.get('/api/plugins')
+    def list_plugins():
+        from .plugins import PluginManager
+        return PluginManager(store).manifests()
+
+    @app.patch('/api/plugins/{plugin_id}')
+    def configure_plugin(plugin_id: str,body: dict):
+        from .plugins import PluginManager
+        return PluginManager(store).toggle(plugin_id,body.get('enabled',True))
+
+    @app.get('/api/skills')
+    def skills(query: str=''):
+        from .skills import SkillManager
+        return SkillManager(store).list(query)
+
+    @app.get('/api/skills/{skill_id}')
+    def skill_detail(skill_id: str):
+        from .skills import SkillManager
+        return SkillManager(store).read(skill_id)
+
+    @app.post('/api/skills')
+    async def install_skill(file: UploadFile=File(...)):
+        from .skills import SkillManager
+        return SkillManager(store).install(file.filename or 'SKILL.md',await file.read(5*1024*1024+1))
+
+    @app.get('/api/recipes')
+    def recipes():return [{k:v for k,v in x.items() if k!='code'} for x in store.objects('recipes')]
+
+    @app.get('/api/recipes/{recipe_id}')
+    def recipe(recipe_id: str):return store.object('recipes',recipe_id)
+
+    @app.get('/api/projects')
+    def projects():return store.objects('projects')
+
+    @app.post('/api/projects')
+    def save_project(body: dict):
+        from .plugins import PluginManager
+        return PluginManager(store).choose('projects',body.get('plugin_id','auto')).save_project(store,str(body.get('name','GIS 工程')))
+
+    @app.post('/api/projects/{project_id}/open')
+    def open_project(project_id: str):
+        from .plugins import PluginManager
+        if active:raise HTTPException(409,'请等待当前任务结束后再打开工程。')
+        project=store.object('projects',project_id)
+        return PluginManager(store).get(project['plugin_id']).open_project(store,project_id)
+
+    @app.get('/api/layout-templates')
+    def templates():return store.objects('templates')
+
+    @app.post('/api/layout-templates')
+    def save_template(body: dict):
+        from .plugins import PluginManager
+        return PluginManager(store).choose('templates',body.get('plugin_id','auto')).save_template(store,str(body.get('name','地图布局')))
+
+    @app.post('/api/layout-templates/{template_id}/apply')
+    def apply_template(template_id: str,body: dict):
+        item=store.object('templates',template_id);layout=item['layout'].copy();bindings=body.get('bindings',{})
+        for key in ('focus_layer_id','context_layer_id'):
+            if layout.get(key):layout[key]=bindings.get(layout[key],layout[key])
+        layout.update(plugin_id=item['plugin_id'],template_id=template_id,template_bindings=bindings)
+        return cartography.update_layout(store,layout)
+
+    @app.get('/api/layout/scene')
+    def layout_scene():
+        from .plugins import PluginManager
+        layout=cartography.Layout.model_validate(cartography.get_layout(store))
+        plugin=PluginManager(store).choose('cartography',layout.plugin_id)
+        if not hasattr(plugin,'scene'):raise ValueError('当前插件未提供可编辑布局场景。请选择支持该能力的插件。')
+        return plugin.scene(store,layout,[x for x in store.layers() if x['style'].get('visible',True)])
+
+    @app.get('/api/layout-scenes/{scene_id}/{element_id}.png')
+    def layout_element(scene_id: str,element_id: str):
+        item=store.object('layout_scenes',scene_id)
+        if element_id not in item['files']:raise HTTPException(404,'布局元素不存在。')
+        return FileResponse(store.root/item['files'][element_id],media_type='image/png',headers={'Cache-Control':'private, max-age=31536000, immutable'})
 
     @app.get('/api/imports')
     def imports():
@@ -133,7 +217,7 @@ def create_app(workspace=None):
     def update_layout(body: dict):return cartography.update_layout(store,body)
 
     @app.get('/api/layout/preview')
-    def preview():return Response(cartography.render_map(store,'svg',100),media_type='image/svg+xml')
+    def preview():return Response(cartography.render_map(store,'svg',100,preview=True),media_type='image/svg+xml')
 
     @app.post('/api/layout/export')
     def export_map(body: dict):return cartography.export_map(store,body.get('format','pdf'),int(body.get('dpi',150)),body.get('layer_ids'))
@@ -206,14 +290,14 @@ def create_app(workspace=None):
         config=None
         if body.mode=='model':
             config=resolve_config(body.base_url,body.model,body.api_key,body.protocol,body.reasoning_effort)
-        elif body.mode not in ('offline','algorithm','workflow'):
+        elif body.mode not in ('offline','algorithm','workflow','code'):
             raise ValueError('未知运行模式。')
         # One workspace mutation owner. Parallel clients cannot race on the workspace.
         with gate:
             if active:
                 raise HTTPException(409,'工作区已有运行中的任务，请等待或停止。')
             run={'id':uuid.uuid4().hex,'status':'queued','mode':body.mode,'session_id':body.session_id,
-                 'message_input':body.message,'selected_layers':body.selected_layers,'algorithm_id':body.algorithm_id,'workflow_id':body.workflow_id,'arguments':body.arguments,'created_at':now(),'message':'','output_layers':[]}
+                 'message_input':body.message,'selected_layers':body.selected_layers,'algorithm_id':body.algorithm_id,'workflow_id':body.workflow_id,'arguments':body.arguments,'code':body.code,'plugin_id':body.plugin_id,'inputs':body.inputs,'save_as':body.save_as,'recipe_id':body.recipe_id,'output_name':body.output_name,'created_at':now(),'message':'','output_layers':[]}
             store.save_run(run)
             cancel=threading.Event()
             active[run['id']]=cancel

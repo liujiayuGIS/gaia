@@ -42,7 +42,9 @@ def install(registry,Tool,Args):
         layer_id: str
         limit: int=Field(default=20,ge=1,le=100)
     def search(a,r):
-        return [x for x in algorithms.CATALOG if not a.query or a.query.lower() in (x['id']+x['name']+x['category']+x['description']).lower()]
+        from .plugins import PluginManager
+        matches=PluginManager(store).algorithms(a.query)
+        return [{k:v for k,v in x.items() if k in ('id','name','category','plugin_id','output')} for x in matches[:40]]
     def export_data(a,r):
         import uuid
         from .store import now
@@ -69,12 +71,12 @@ def install(registry,Tool,Args):
         return {'total':len(features),'features':features[:a.limit]}
     registry.register(Tool('search_algorithms','检索可用 GIS 算法目录；返回真实输入参数与输出契约。',Search,search))
     registry.register(Tool('get_algorithm','读取算法的完整参数和适用条件。',Algorithm,lambda a,r:algorithms.get_spec(a.algorithm_id)))
-    registry.register(Tool('run_algorithm','执行已注册算法。先检查输入；严格按 get_algorithm 参数传入。结果保存为新图层并附加血缘。',RunAlgorithm,lambda a,r:algorithms.run_algorithm(store,a.algorithm_id,a.arguments,r),True))
+    registry.register(Tool('run_algorithm','执行已注册算法。先检查输入；严格按 get_algorithm 参数传入。结果保存为新图层并附加血缘。',RunAlgorithm,lambda a,r:(__import__('geoagent.plugins',fromlist=['PluginManager']).PluginManager(store).execute(a.algorithm_id,a.arguments,r,registry._local.cancel) if ':' in a.algorithm_id else algorithms.run_algorithm(store,a.algorithm_id,a.arguments,r)),True))
     registry.register(Tool('list_imports','列出用户已上传到数据收件箱的资产与可导入子资源；不读取宿主机任意目录。',Args,lambda a,r:store.objects('assets')))
     registry.register(Tool('inspect_import','检查待导入数据的文件、驱动、坐标系和子图层。',Asset,lambda a,r:store.object('assets',a.asset_id)))
     registry.register(Tool('import_data','导入用户已上传的资产；遇到多资源必须指定 resource，多图层必须指定 sublayer；缺少 CRS 需用户明确。',Import,lambda a,r:formats.import_asset(store,a.asset_id,a.resource,a.source_crs,a.sublayer,r),True))
     registry.register(Tool('get_layout','读取当前出图布局和指北针、图例、比例尺位置。',Args,lambda a,r:cartography.get_layout(store)))
-    registry.register(Tool('update_layout','设置制图布局。支持 title/subtitle/paper(A4/A3)/orientation/north_arrow/north_position/legend/legend_position/scale_bar/scale_position/grid/source_note/extent。位置使用 top-left/top-right/bottom-left/bottom-right。',Layout,lambda a,r:cartography.update_layout(store,a.changes),True))
+    registry.register(Tool('update_layout','设置制图布局。支持 template(standard/choropleth/terrain)、focus_layer_id、map_crs(米制投影)、legend_title、contour_interval(25–2000米)、context_layer_id(定位插图矢量层)，以及 title/subtitle/paper(A4/A3)/orientation/north_arrow/north_position/legend/legend_position/scale_bar/scale_position/grid/source_note/extent。位置使用 top-left/top-right/bottom-left/bottom-right；专业模板图例可用 outside-right。专业模板需横向纸张；choropleth 主图层需 style_layer 的数值 field；terrain 主图层需米制高程 DEM。',Layout,lambda a,r:cartography.update_layout(store,a.changes),True))
     registry.register(Tool('export_map','按当前布局导出真实 PNG/JPEG/TIFF/SVG/PDF，返回可下载成果；dpi 可选 100/150/200/300。',ExportMap,lambda a,r:cartography.export_map(store,a.format,a.dpi,a.layer_ids,r),True))
     registry.register(Tool('export_data','导出矢量为 geojson/csv/gpkg/shp/fgb/parquet/kml/gml，栅格为 tif；实际支持以 GDAL 驱动为准。',ExportData,export_data,True))
     registry.register(Tool('update_task_plan','在复杂处理前给出可见执行步骤，不写隐藏思维过程。',Plan,plan))

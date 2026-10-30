@@ -34,13 +34,23 @@ matplotlib.rcParams['pdf.fonttype']=42
 class Layout(BaseModel):
     model_config=ConfigDict(extra='forbid')
     title: str=Field(default='空间分析成果图',max_length=120)
-    subtitle: str=Field(default='GeoAgent Studio',max_length=200)
+    subtitle: str=Field(default='GAIA',max_length=200)
+    plugin_id: str=Field(default='auto',max_length=50)
+    template_id: str | None=None
+    template_bindings: dict[str,str]=Field(default_factory=dict)
+    items: dict[str,dict]=Field(default_factory=dict)
+    template: Literal['standard','choropleth','terrain']='standard'
+    map_crs: str | None=Field(default=None,max_length=300)
+    legend_title: str | None=Field(default=None,max_length=80)
+    contour_interval: float=Field(default=200,ge=25,le=2000)
+    context_layer_id: str | None=Field(default=None,max_length=100)
+    focus_layer_id: str | None=Field(default=None,max_length=100)
     paper: Literal['A4','A3']='A4'
     orientation: Literal['landscape','portrait']='landscape'
     north_arrow: bool=True
     north_position: Literal['top-left','top-right','bottom-left','bottom-right']='top-right'
     legend: bool=True
-    legend_position: Literal['top-left','top-right','bottom-left','bottom-right']='bottom-right'
+    legend_position: Literal['top-left','top-right','bottom-left','bottom-right','outside-right']='bottom-right'
     scale_bar: bool=True
     scale_position: Literal['top-left','top-right','bottom-left','bottom-right']='bottom-left'
     grid: bool=False
@@ -54,6 +64,24 @@ def get_layout(store):
 
 def update_layout(store,changes):
     layout=Layout.model_validate({**get_layout(store),**changes})
+    import re
+    if len(layout.items)>100:raise ValueError('布局元素上限100个。')
+    for id,item in layout.items.items():
+        if not re.fullmatch(r'[a-zA-Z0-9_-]{1,80}',id):raise ValueError('布局元素ID格式无效。')
+        for key in ('x','y','width','height','rotation','z','font_size'):
+            if key in item:
+                value=float(item[key])
+                if not math.isfinite(value) or abs(value)>10000:raise ValueError('布局位置与大小必须是有限数值。')
+                if key in ('width','height','font_size') and value<=0:raise ValueError('布局尺寸和字号必须大于0。')
+        if 'text' in item and len(str(item['text']))>4000:raise ValueError('元素文本超过4000字符。')
+        if 'picture_path' in item:raise ValueError('图片请使用上传资源ID。')
+        if 'map_extent' in item:
+            e=item['map_extent']
+            if len(e)!=4 or not all(math.isfinite(float(x)) for x in e) or not(e[0]<e[2] and e[1]<e[3]):raise ValueError('地图框范围无效。')
+    if layout.map_crs:
+        from pyproj import CRS
+        try:CRS.from_user_input(layout.map_crs)
+        except Exception:raise ValueError('无法识别出图投影，请填写有效 EPSG 编码。') from None
     if layout.extent:
         x0,y0,x1,y1=layout.extent
         if not(-180<=x0<x1<=180 and -85<=y0<y1<=85):raise ValueError('出图范围必须是有效 WGS84 边界。')
@@ -64,12 +92,19 @@ def position(value):
     return {'top-left':(.07,.9),'top-right':(.93,.9),'bottom-left':(.07,.09),'bottom-right':(.93,.09)}[value]
 
 
-def render_map(store,fmt='svg',dpi=150,layer_ids=None,overrides=None):
+def render_map(store,fmt='svg',dpi=150,layer_ids=None,overrides=None,preview=False):
     if fmt not in ('png','jpeg','jpg','tiff','tif','svg','pdf'):raise ValueError('支持 PNG、JPEG、TIFF、SVG 和 PDF。')
     if dpi not in (100,150,200,300):raise ValueError('DPI 支持 100、150、200、300。')
     config=Layout.model_validate({**get_layout(store),**(overrides or {})})
     layers=[x for x in store.layers() if (not layer_ids or x['id'] in layer_ids) and x['style'].get('visible',True)]
     if not layers:raise ValueError('请先导入或生成可见图层。')
+    if config.plugin_id!='python':
+        from .plugins import PluginManager
+        renderer=PluginManager(store).choose('cartography',config.plugin_id)
+        return renderer.render(store,config,fmt,dpi,layers,preview=preview)
+    if config.template!='standard':
+        from .professional import render
+        return render(store,config,layers,fmt,dpi)
     def draw_order(layer):
         if layer.get('kind')=='raster':return 0
         types=' '.join(layer.get('geometry_types',[]))
@@ -122,7 +157,7 @@ def render_map(store,fmt='svg',dpi=150,layer_ids=None,overrides=None):
             if config.legend:
                 if colorbar:
                     cmap,norm,label=colorbar;cbax=fig.add_axes([.72,.055,.20,.012]);fig.colorbar(matplotlib.cm.ScalarMappable(norm=norm,cmap=cmap),cax=cbax,orientation='horizontal',label=label);cbax.tick_params(labelsize=7)
-                loc={'top-left':'upper left','top-right':'upper right','bottom-left':'lower left','bottom-right':'lower right'}[config.legend_position]
+                loc={'top-left':'upper left','top-right':'upper right','bottom-left':'lower left','bottom-right':'lower right','outside-right':'upper right'}[config.legend_position]
                 ax.legend(handles=patches,loc=loc,fontsize=6,framealpha=.9,edgecolor='#dce5eb')
             fig.text(.07,.065,config.source_note,fontsize=7,color='#7b8a96')
             fig.text(.07,.041,'显示投影 EPSG:3857 · 比例尺按地图中心纬度换算 · 指北针为真北',fontsize=6,color='#99a6af')
@@ -133,5 +168,5 @@ def render_map(store,fmt='svg',dpi=150,layer_ids=None,overrides=None):
 def export_map(store,fmt='pdf',dpi=150,layer_ids=None,run_id=None):
     content=render_map(store,fmt,dpi,layer_ids)
     export_id=uuid.uuid4().hex;folder=store.root/'exports';folder.mkdir(exist_ok=True);path=folder/f'{export_id}.{fmt}';path.write_bytes(content)
-    result={'id':export_id,'name':get_layout(store)['title']+'.'+fmt,'format':fmt,'dpi':dpi,'created_at':now(),'run_id':run_id,'url':f'/api/exports/{export_id}/download','layout':get_layout(store),'path':str(path.relative_to(store.root))}
+    result={'id':export_id,'name':get_layout(store)['title']+'.'+fmt,'format':fmt,'dpi':dpi,'created_at':now(),'run_id':run_id,'plugin_id':get_layout(store).get('plugin_id','auto'),'url':f'/api/exports/{export_id}/download','layout':get_layout(store),'path':str(path.relative_to(store.root))}
     return store.put_object('exports',export_id,result)

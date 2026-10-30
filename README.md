@@ -1,10 +1,12 @@
-# GeoAgent Studio · v0.2
+# GAIA · v0.3.0
+
+**Geospatial Artificial Intelligence Assistant · 地理空间人工智能助手盖亚**
 
 自然语言驱动的本地 GIS 工作台：导入矢量与栅格、执行空间分析、把结果发布为新图层，并按语言要求制作地图。
 
-![GeoAgent Studio](screenshots/studio-map.png)
+![GAIA workspace](screenshots/gaia-workspace.png)
 
-这是可运行的第二版验收实现。目标是逐步覆盖桌面 GIS 工作流；**目前还不等同于 QGIS / ArcGIS 全量能力，也没有经过与其他 Agent 的同条件性能评测。**
+这是可运行的插件与原生 QGIS 验收实现。目标是逐步覆盖桌面 GIS 工作流；**目前还不等同于 QGIS / ArcGIS 全量能力，也没有经过与其他 Agent 的同条件性能评测。**
 
 ## 启动
 
@@ -27,12 +29,18 @@ Linux 中文制图需要安装 Noto CJK 字体；macOS 自动使用 Arial Unicod
 
 ## 可以验收什么
 
+- **GAIA 工作区**：圆润的三栏数据/地图/常驻助手布局，独立聊天区、浅深主题、自定义强调色和地图背景。
+- **QGIS 原生插件**：本机真实注册 440 个 Processing 算法，原生布局、工程、样式与 QPT 模板保存；通过插件 SDK 继续扩展其他应用。
+- **Skills 与代码**：安装 SKILL.md 方法包，Harness 按任务读取和编排；Python/PyQGIS 沙箱代码生成新数据并保存可复用算法。
+
 - **数据收件箱**：附件上传、多文件配套、ZIP / KMZ 解包、资源与子图层发现、自然语言导入、缺失 CRS 提示。
 - **35 个确定性算法**：缓冲、裁剪、叠加、空间连接、最近邻、筛选、字段计算、网格、DBSCAN、IDW、热力密度、栅格计算、NDVI、地形分析、栅格转面、分区统计等。
 - **结果自动入层**：每次分析保存新数据；原输入保留。支持空结果、属性表、样式、重命名、定位、数据导出和处理血缘。
-- **真实制图输出**：PNG / JPEG / TIFF / SVG / PDF；A4 / A3、横竖版、标题、指北针、图例、比例尺与角落位置。预览和导出共用布局。
+- **真实制图输出**：PNG / JPEG / TIFF / SVG / PDF；A4 / A3、横竖版、标题、指北针、图例、比例尺与角落位置。支持拖动、缩放、元素属性、地图范围、层级、锁定与撤销。预览和导出共用布局。
 - **Responses API**：工具调用后原样回传 reasoning / function-call 项，保留加密推理上下文；可选择推理强度。兼容 Chat Completions。
 - **可重放工作流**：模型可保存算法 DAG；执行时校验参数、检查输入、逐节点发布结果并保留执行凭据。
+
+插件架构、运行边界及扩展方式见 [插件与 Skills](docs/PLUGINS_AND_SKILLS.md)。原生 QGIS 可通过 `bash scripts/install_qgis_runtime.sh` 安装（当前安装器为 macOS ARM64）；运行时不进入 Git。
 
 完整目录和限制见 [能力与格式](docs/CAPABILITIES.md)，操作步骤见 [验收说明](docs/ACCEPTANCE.md)。
 
@@ -82,7 +90,8 @@ SQLite 事件 / 输入哈希 / 方法参数 / 布局与下载成果
 - `algorithms.py`：35 个算法与参数契约；表达式使用受限 AST，不执行任意 Python。
 - `formats.py`：GDAL 导入导出、收件箱、栅格预览、原生投影快照。
 - `workflows.py`：最多 12 节点的依赖检查、拓扑执行和重放凭据。
-- `cartography.py`：统一布局与五种真实格式的渲染。
+- `cartography.py` / `plugins/`：统一布局、原生 QGIS / Python 执行插件、五种格式、工程与模板。
+- `skills.py` / `plugin_tools.py`：Skill 包、代码配方与 Harness 插件工具。
 - `store.py`：SQLite 追加事件、不可变产物与 SHA-256 血缘。
 
 模型循环最多 24 轮，轮间检查 600 秒预算，HTTP 超时独立为 120 秒。Responses 每轮最多 12 个调用，兼容 Chat 每轮最多 8 个；Responses 同一失败调用连续重复 3 次后停止。
@@ -91,25 +100,25 @@ SQLite 事件 / 输入哈希 / 方法参数 / 布局与下载成果
 ## 验证
 
 ```bash
-.venv/bin/python -m pytest -q
+PYTHONPATH=backend GEOAGENT_DISABLE_QGIS=1 .venv/bin/python -m pytest -q
 cd frontend && npm run build
 ```
 
 浏览器检查应使用隔离工作区，避免操作真实项目：
 
 ```bash
-GEOAGENT_WORKSPACE=/tmp/geoagent-qa PORT=8766 ./start.sh
+GEOAGENT_WORKSPACE=/tmp/gaia-qa PORT=8767 ./start.sh
 # 另一终端，提供 Playwright 和浏览器后执行
-BASE_URL=http://127.0.0.1:8766 node scripts/browser-test.cjs
+BASE_URL=http://127.0.0.1:8767 node scripts/gaia-ui-test.cjs
 ```
 
-可用 `PLAYWRIGHT_MODULE` 指定模块、`CHROME_PATH` 指定 Chrome。实际验证结果见 [verification.json](verification.json)。
+可用 `PLAYWRIGHT_MODULE` 指定模块、`CHROME_PATH` 指定 Chrome。当前验收证据见 [v0.3 验证记录](docs/VERIFICATION_V03.md)；[verification.json](verification.json) 保留早期 v0.2 记录。GAIA 浏览器测试需要先导入真实矢量和 DEM，可用下载脚本和 `seed_native_demo.py` 准备隔离工作区。
 `sample-data/` 和界面示例均为合成数据，不代表真实站点、公园、行政区或地形。
 
 ## 下一阶段与限制
 
-QGIS Processing 引擎桥接、路网服务区、更多符号和布局模板、大文件分块 / 空间数据库、检查点恢复、澄清后继续、跨项目工作流和独立 GIS 正确性基准尚待实现。
-本版没有多用户鉴权、三维、Earth Engine、影像深度学习、自动在线数据检索、拓扑编辑、删除 / 撤销和完整桌面工程互通。
-地图导出采用 EPSG:3857 和当前可见数据，不含在线底图；地图 TIFF 是排版图像，栅格数据导出才是地理参考 GeoTIFF。
+QGIS Processing 桥接、原生布局及工程/模板已实现（当前原生作业运行器使用 macOS Seatbelt；其他平台需配置受限运行器）。路网服务区、完整交互符号系统、大文件分块 / 空间数据库、检查点恢复、澄清后继续、跨项目工作流和独立 GIS 正确性基准仍待完善。
+本版没有多用户鉴权、三维、Earth Engine、影像深度学习、自动在线数据检索、拓扑编辑和完整桌面工程互通。布局编辑已支持撤销/重做；数据成果保持独立保存。
+基础布局采用 EPSG:3857；专业专题 / 地形模板支持米制出图投影、分级图例、地名避让、等高线与定位插图，见 [真实数据制图](docs/PROFESSIONAL_MAPS.md)。导出不含在线底图；地图 TIFF 是排版图像，栅格数据导出才是地理参考 GeoTIFF。
 
-参考依据和取舍见 [架构参考](docs/RESEARCH.md)。界面按 Anthropic 官方 `frontend-design` 技能指导重新实现，未复制其他 GIS Agent 的源码或截图。
+参考依据和取舍见 [架构参考](docs/RESEARCH.md)。界面结合 frontend-design、Impeccable、Interface Design，并按用户最新要求形成 GAIA 自有布局和标识；见 [设计参考](docs/DESIGN_REFERENCES.md)。未复制其他 GIS Agent 的源码或截图。

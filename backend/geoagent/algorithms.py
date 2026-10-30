@@ -55,6 +55,11 @@ spec('zonal_statistics','分区统计','统计','对多边形内栅格有效像�
 
 
 def get_spec(algorithm_id):
+    if ':' in algorithm_id:
+        from .plugins.qgis_plugin import QGISPlugin
+        if algorithm_id.startswith('qgis:'):
+            return next((x for x in QGISPlugin().algorithms() if x['id']==algorithm_id),None) or (_ for _ in ()).throw(ValueError('插件算法不存在。'))
+        if algorithm_id.startswith('python:'):return get_spec(algorithm_id.split(':',1)[1])
     for item in CATALOG:
         if item['id']==algorithm_id:
             return item
@@ -62,6 +67,11 @@ def get_spec(algorithm_id):
 
 
 def validate_args(algorithm_id,arguments):
+    if ':' in algorithm_id:
+        spec=get_spec(algorithm_id)
+        unknown=set(arguments)-set(spec['parameters'])
+        if unknown:raise ValueError('未知参数：'+', '.join(unknown))
+        return arguments
     definition=get_spec(algorithm_id)
     unknown=set(arguments)-set(definition['parameters'])
     if unknown:
@@ -116,6 +126,9 @@ def provenance(store,args,run_id,algorithm_id):
 
 
 def run_algorithm(store,algorithm_id,arguments,run_id):
+    if ':' in algorithm_id:
+        from .plugins import PluginManager
+        return PluginManager(store).execute(algorithm_id,arguments,run_id,__import__('threading').Event())
     a=validate_args(algorithm_id,arguments);definition=get_spec(algorithm_id);prov=provenance(store,a,run_id,algorithm_id)
     meta=store.get_layer(a['layer_id']);name=meta['name']+' · '+definition['name']
     if meta.get('kind')=='raster' or algorithm_id=='zonal_statistics':
