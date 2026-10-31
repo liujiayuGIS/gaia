@@ -92,6 +92,24 @@ jobs:
           if [ "${{ matrix.arch }}" = arm64 ]; then export GAIA_PACKAGED_EXECUTABLE="$PWD/.desktop-build/installers/mac-arm64/GAIA.app/Contents/MacOS/GAIA"; fi
           if [ "$RUNNER_OS" = Windows ]; then export GAIA_PACKAGED_EXECUTABLE="$PWD/.desktop-build/installers/win-unpacked/GAIA.exe"; fi
           npm --prefix desktop run smoke
+      - name: Verify macOS bundle signature after use
+        if: runner.os == 'macOS'
+        run: |
+          APP=.desktop-build/installers/mac/GAIA.app
+          if [ "${{ matrix.arch }}" = arm64 ]; then APP=.desktop-build/installers/mac-arm64/GAIA.app; fi
+          codesign --verify --deep --strict "$APP"
+      - name: Install Windows package and launch installed app
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem .desktop-build/installers/GAIA-*-win-x64.exe | Select-Object -First 1
+          $installRoot = Join-Path $env:RUNNER_TEMP 'GAIA Installer Test'
+          $installed = Start-Process -FilePath $installer.FullName -ArgumentList @('/S', "/D=$installRoot") -Wait -PassThru
+          if ($installed.ExitCode -ne 0) { throw "Installer failed: $($installed.ExitCode)" }
+          $env:GAIA_PACKAGED_EXECUTABLE = Join-Path $installRoot 'GAIA.exe'
+          $env:GAIA_SMOKE_DATA_DIR = Get-Content .desktop-build/qa/smoke-user-data.txt
+          npm --prefix desktop run smoke
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Checksums
         run: node -e "const fs=require('fs'),c=require('crypto'),p='.desktop-build/installers/';(async()=>{for(const f of fs.readdirSync(p).filter(x=>/\.(dmg|exe)$/.test(x))){const h=c.createHash('sha256');for await(const b of fs.createReadStream(p+f))h.update(b);fs.writeFileSync(p+f+'.sha256',h.digest('hex')+'  '+f+'\n')}})().catch(e=>{console.error(e);process.exit(1)})"
       - name: Upload tested installers to draft

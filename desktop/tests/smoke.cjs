@@ -36,9 +36,17 @@ const {_electron:electron}=require('playwright');const path=require('node:path')
    return {count:(await (await fetch('/api/layers')).json()).length,pdf:exported.url};
   });
   result.count=analysis.count;
+  const saved=path.resolve(__dirname,'../../.desktop-build/qa/desktop-export-'+process.platform+'.pdf');
+  fs.mkdirSync(path.dirname(saved),{recursive:true});
+  const downloaded=app.evaluate(({session},file)=>new Promise(resolve=>{
+   session.defaultSession.once('will-download',(_,item)=>{item.setSavePath(file);item.once('done',(_,state)=>resolve(state))});
+  }),saved);
+  await page.evaluate(url=>{const a=document.createElement('a');a.href=url;a.download='GAIA-map.pdf';document.body.appendChild(a);a.click();a.remove()},analysis.pdf);
+  assert.equal(await downloaded,'completed');assert.equal(fs.readFileSync(saved).subarray(0,5).toString(),'%PDF-');
+
   // Requests outside the private bridge cannot read the user's workspace.
   const readyDir=path.join(userData,'sessions');
-  const ready=JSON.parse(fs.readFileSync(path.join(readyDir,fs.readdirSync(readyDir).find(x=>x.endsWith('.json'))),'utf8'));
+  const ready=JSON.parse(fs.readFileSync(path.join(readyDir,fs.readdirSync(readyDir).filter(x=>x.endsWith('.json')).sort((a,b)=>fs.statSync(path.join(readyDir,b)).mtimeMs-fs.statSync(path.join(readyDir,a)).mtimeMs)[0]),'utf8'));
   assert.equal((await fetch('http://127.0.0.1:'+ready.port+'/api/layers')).status,401);
   await page.reload();await page.waitForSelector('.map-canvas[data-ready="true"]',{timeout:600000});
   fs.mkdirSync(path.resolve(__dirname,'../../.desktop-build/qa'),{recursive:true});

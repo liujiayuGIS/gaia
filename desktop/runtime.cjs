@@ -4,7 +4,7 @@ const crypto=require('node:crypto');const {spawn}=require('node:child_process');
 function executable(prefix,platform=process.platform){return path.join(prefix,platform==='win32'?'python.exe':'bin/python')}
 function environment(prefix,extra={},platform=process.platform){
  const lib=platform==='win32'?path.join(prefix,'Library'):prefix;
- const env={...process.env,...extra,PYTHONNOUSERSITE:'1',PYTHONUTF8:'1',QT_QPA_PLATFORM:'offscreen',
+ const env={...process.env,...extra,PYTHONNOUSERSITE:'1',PYTHONDONTWRITEBYTECODE:'1',PYTHONUTF8:'1',QT_QPA_PLATFORM:'offscreen',
   QGIS_PREFIX_PATH:lib,GDAL_DATA:path.join(lib,'share/gdal'),PROJ_DATA:path.join(lib,'share/proj'),
   PATH:[prefix,path.join(prefix,'Scripts'),path.join(lib,'bin'),process.env.PATH||''].join(path.delimiter)};
  for(const key of ['PYTHONHOME','PYTHONPATH','QT_PLUGIN_PATH','LD_LIBRARY_PATH','DYLD_LIBRARY_PATH'])delete env[key];

@@ -63,7 +63,7 @@ def execute(python, worker, request, job, cancel=None, timeout=120, restricted=T
         'TMPDIR':str(job/'tmp'),'XDG_CACHE_HOME':str(job/'cache'),'XDG_CONFIG_HOME':str(job/'config'),
         'MPLCONFIGDIR':str(job/'cache/matplotlib'),'QT_QPA_PLATFORM':'offscreen',
         'QGIS_PREFIX_PATH':str(qgis_prefix),'QGIS_CUSTOM_CONFIG_PATH':str(job/'config'),
-        'PYTHONNOUSERSITE':'1','OPENBLAS_NUM_THREADS':'1','OMP_NUM_THREADS':'1','PYTHONUTF8':'1'}
+        'PYTHONNOUSERSITE':'1','PYTHONDONTWRITEBYTECODE':'1','OPENBLAS_NUM_THREADS':'1','OMP_NUM_THREADS':'1','PYTHONUTF8':'1'}
     if sys.platform=='win32':
         env.update(SystemRoot=os.environ.get('SystemRoot','C:/Windows'),TEMP=str(job/'tmp'),TMP=str(job/'tmp'),
                    USERPROFILE=str(job/'config'),APPDATA=str(job/'config'),LOCALAPPDATA=str(job/'cache'))
@@ -73,7 +73,7 @@ def execute(python, worker, request, job, cancel=None, timeout=120, restricted=T
         if folder.exists():env[key]=str(folder)
     request={**request,'job':str(job),'timeout':timeout}
     request_path=job/'request.json';request_path.write_text(json.dumps(request,ensure_ascii=False))
-    command=[str(python),'-I',str(CODE/worker),str(request_path)]
+    command=[str(python),'-I','-B',str(CODE/worker),str(request_path)]
     sandbox='none'
     windows_sandbox=restricted and sys.platform=='win32'
     if restricted and not windows_sandbox:
