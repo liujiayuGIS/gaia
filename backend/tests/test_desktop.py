@@ -6,6 +6,21 @@ from geoagent.app import create_app
 from geoagent.plugins import runtime
 
 
+def test_workspace_lease_and_pid_probe(tmp_path):
+    import subprocess,sys
+    from geoagent.process_utils import WorkspaceLease,process_alive
+    lease=WorkspaceLease(tmp_path/'execution.lock')
+    with pytest.raises(BlockingIOError):WorkspaceLease(tmp_path/'execution.lock')
+    lease.close()
+    WorkspaceLease(tmp_path/'execution.lock').close()
+    child=subprocess.Popen([sys.executable,'-c','import time;time.sleep(30)'])
+    try:
+        assert process_alive(child.pid)
+        assert child.poll() is None
+    finally:child.terminate();child.wait()
+    assert not process_alive(child.pid)
+
+
 def test_desktop_auth_all_routes(tmp_path,monkeypatch):
     monkeypatch.setenv('GAIA_DESKTOP_TOKEN','private-desktop-token-1234567890abcdef')
     client=TestClient(create_app(tmp_path))

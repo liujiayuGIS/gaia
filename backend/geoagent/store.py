@@ -2,6 +2,7 @@
 from __future__ import annotations
 import json
 import os
+from .process_utils import process_alive
 import sqlite3
 import threading
 import uuid
@@ -30,12 +31,7 @@ class Store:
             for row in db.execute('SELECT id,data FROM runs').fetchall():
                 run = json.loads(row['data'])
                 if run['status'] in ('queued', 'running'):
-                    if run.get('owner_pid'):
-                        try:
-                            os.kill(run['owner_pid'],0)
-                            continue
-                        except ProcessLookupError:pass
-                        except PermissionError:continue
+                    if process_alive(run.get('owner_pid')):continue
                     run.update(status='interrupted', message='服务已重启。可从检查点继续；已完成步骤不会重复执行。')
                     db.execute('UPDATE runs SET data=? WHERE id=?', (json.dumps(run, ensure_ascii=False), run['id']))
 

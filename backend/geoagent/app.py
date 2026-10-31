@@ -4,7 +4,7 @@ import io
 import json
 import os
 import threading
-import fcntl
+from .process_utils import WorkspaceLease
 import uuid
 from pathlib import Path
 from urllib.parse import urlparse
@@ -417,10 +417,9 @@ def create_app(workspace=None):
     def launch(run,config,resume=False,decision=None):
         with gate:
             if active:raise HTTPException(409,'工作区已有运行中的任务，请等待或停止。')
-            lease=(store.root/'execution.lock').open('a')
-            try:fcntl.flock(lease,fcntl.LOCK_EX|fcntl.LOCK_NB)
+            try:lease=WorkspaceLease(store.root/'execution.lock')
             except BlockingIOError:
-                lease.close();raise HTTPException(409,'另一个服务进程正在执行此工作区的任务。')
+                raise HTTPException(409,'另一个服务进程正在执行此工作区的任务。')
             if config:credentials[run['id']]=config['api_key']
             run.update(status='queued',resumable=True,owner_pid=os.getpid())
             store.save_run(run);cancel=threading.Event();active[run['id']]=cancel
@@ -431,7 +430,7 @@ def create_app(workspace=None):
                 run.update(status='failed',message=str(exc),resumable=bool(run.get('checkpoint_version')))
                 store.save_run(run);store.event(run['id'],'run_error',{'error_type':type(exc).__name__,'message':str(exc)})
             finally:
-                fcntl.flock(lease,fcntl.LOCK_UN);lease.close()
+                lease.close()
                 with gate:
                     active.pop(run['id'],None)
                     if store.run(run['id'])['status'] in ('completed','needs_attention'):
