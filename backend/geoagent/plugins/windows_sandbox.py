@@ -69,6 +69,10 @@ def launch(command,job,env,stdout,stderr,readable,timeout):
         profile=True;string=W.LPWSTR();ensure(sid_string(sid,C.byref(string)))
         try:sid_text=string.value
         finally:local_free(C.cast(string,void))
+        # Windows rewrites TEMP/TMP for an AppContainer to this location,
+        # relative to LOCALAPPDATA. Create it before applying the job ACL;
+        # setting TEMP alone does not create the redirected directory.
+        (Path(env['LOCALAPPDATA'])/'Packages'/name/'AC'/'Temp').mkdir(parents=True,exist_ok=True)
         with _lock:
             for folder in readable:
                 folder=str(Path(folder).resolve())

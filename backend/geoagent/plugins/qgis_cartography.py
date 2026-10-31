@@ -3,7 +3,6 @@ import json
 import math
 from pathlib import Path
 import shutil
-import sys
 import zipfile
 from qgis.core import *
 from qgis.PyQt.QtCore import Qt, QRectF, QSize, QSizeF
@@ -280,11 +279,7 @@ def execute(request):
     project.setCustomVariables({'geoagent_layer_map':json.dumps(bindings),'geoagent_layout':json.dumps(config)})
     project.viewSettings().setDefaultViewExtent(QgsReferencedRectangle(extent,crs))
     for backend_id,layer in loaded.items():layer.saveNamedStyle(str(styles/(backend_id+'.qml')))
-    # QTemporaryDir creates an owner-only ACL on Windows which excludes the
-    # AppContainer SID. Write the native XML project directly inside the job;
-    # the portable bundle below still compresses the project and its data.
-    project_path=folder/('project.qgs' if sys.platform=='win32' else 'project.qgz')
-    project.setFileName(str(project_path))
+    project_path=folder/'project.qgz';project.setFileName(str(project_path))
     if not project.write():raise ValueError('QGIS 工程保存失败：'+project.error())
     template=folder/'layout.qpt';layout.saveAsTemplate(str(template),QgsReadWriteContext())
     bundle=out/'qgis-project.zip'

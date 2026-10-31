@@ -2,7 +2,10 @@
 const {_electron:electron}=require('playwright');const path=require('node:path');const fs=require('node:fs');const os=require('node:os');const assert=require('node:assert/strict');
 (async()=>{
  const userData=process.env.GAIA_SMOKE_DATA_DIR||fs.mkdtempSync(path.join(os.tmpdir(),'gaia-desktop-test-'));
- const launch=()=>electron.launch({...(process.env.GAIA_PACKAGED_EXECUTABLE?{executablePath:process.env.GAIA_PACKAGED_EXECUTABLE,args:[]}:{args:[path.resolve(__dirname,'..')]}),
+ // Hosted Intel/Windows runners have no hardware GPU. Exercise the same map
+ // using Chromium's explicit software driver only in automated test sessions.
+ const graphics=process.env.CI&&process.arch==='x64'?['--use-gl=angle','--use-angle=swiftshader-webgl','--enable-unsafe-swiftshader']:[];
+ const launch=()=>electron.launch({...(process.env.GAIA_PACKAGED_EXECUTABLE?{executablePath:process.env.GAIA_PACKAGED_EXECUTABLE,args:graphics}:{args:[path.resolve(__dirname,'..'),...graphics]}),
   env:{...process.env,GAIA_DESKTOP_DATA_DIR:userData},timeout:600000});
  const ready=page=>Promise.race([page.waitForURL('gaia://app/',{timeout:600000}),page.locator('#retry').waitFor({state:'visible',timeout:600000}).then(async()=>{throw new Error('Desktop startup: '+await page.locator('#status').innerText())})]);
  console.log('Desktop test data: '+userData);
