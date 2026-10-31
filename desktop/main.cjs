@@ -79,7 +79,7 @@ else{
    if(!base)return new Response('Local service is starting',{status:503});
    const headers=new Headers(request.headers);headers.delete('origin');headers.delete('host');headers.set('x-gaia-token',token);
    const response=await net.fetch(base+url.pathname+url.search,{method:request.method,headers,body:['GET','HEAD'].includes(request.method)?undefined:request.body,duplex:'half',redirect:'error'});
-   const out=new Headers(response.headers);out.set('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https:; worker-src blob:; font-src 'self' data:; object-src 'none'; frame-src 'self' blob:");
+   const out=new Headers(response.headers);out.set('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https:; worker-src 'self' blob:; font-src 'self' data:; object-src 'none'; frame-src 'self' blob:");
    return new Response(response.body,{status:response.status,headers:out});
   });
   session.defaultSession.setPermissionRequestHandler((wc,permission,callback)=>callback(false));

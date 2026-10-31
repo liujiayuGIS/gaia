@@ -8,7 +8,8 @@ const {_electron:electron}=require('playwright');const path=require('node:path')
  let app=await launch();
  try{
   let page=await app.firstWindow();page.setDefaultTimeout(600000);
-  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  const errors=[];page.on('pageerror',e=>{errors.push(e.message);console.error(e.message)});
+  page.on('console',e=>{if(e.type()==='error')console.error('Renderer: '+e.text())});
   await page.waitForURL('gaia://app/');await page.getByRole('button',{name:'数据面板',exact:true}).waitFor();
   assert.equal(await page.evaluate(()=>typeof require),'undefined');
   const result=await page.evaluate(async()=>{
