@@ -75,9 +75,7 @@ def launch(command,job,env,stdout,stderr,readable,timeout):
                 if folder not in _granted:
                     acl(folder,'/grant','*S-1-15-2-1:(OI)(CI)(RX)','/T','/Q')
                     _granted.add(folder)
-        # Qt's atomic project save preserves file ACLs, which needs WRITE_DAC.
-        # Full control is scoped to this disposable job; runtime/code remain RX.
-        acl(job,'/grant',f'*{sid_text}:(OI)(CI)(F)','/T','/Q')
+        acl(job,'/grant',f'*{sid_text}:(OI)(CI)(M)','/T','/Q')
         acl(job,'/setintegritylevel','(OI)(CI)L','/T','/Q')
         length=size();initialize(None,2,0,C.byref(length))
         attrs=C.create_string_buffer(length.value);ensure(initialize(attrs,2,0,C.byref(length)))

@@ -78,7 +78,7 @@ jobs:
           export GIS_QGIS_PYTHON="$MAMBA_ROOT_PREFIX/envs/gaia-desktop/bin/python"
           if [ "$RUNNER_OS" = Windows ]; then export GIS_QGIS_PYTHON="$MAMBA_ROOT_PREFIX/envs/gaia-desktop/python.exe"; fi
           export GIS_PYTHON="$GIS_QGIS_PYTHON"
-          micromamba run -n gaia-desktop python -m pytest backend/tests/test_desktop.py -q
+          micromamba run -n gaia-desktop python -m pytest backend/tests/test_desktop.py -q --basetemp .desktop-build/native-tests
       - name: First launch, private API, and restart persistence
         run: npm --prefix desktop run smoke
       - name: Create installer
@@ -128,6 +128,8 @@ jobs:
           path: |
             .desktop-build/qa
             .desktop-build/test-workspace/jobs/*/stderr.log
+            .desktop-build/native-tests/**/stderr.log
+            .desktop-build/native-tests/**/stdout.log
           retention-days: 7
   publish:
     needs: [release, build]

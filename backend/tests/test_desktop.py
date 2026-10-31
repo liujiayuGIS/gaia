@@ -71,3 +71,7 @@ outputs['test']=str(p)
     exported=cartography.export_map(store,'pdf',100)
     assert (store.root/exported['path']).read_bytes().startswith(b'%PDF')
     assert exported['quality']['cartography']['passed']
+    saved=store.object('settings','last_qgis_project')
+    assert (store.root/saved['path']).stat().st_size>0
+    reopened=qgis.open_project(store,saved['id'])
+    assert len(reopened['layers'])==2

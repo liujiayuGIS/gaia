@@ -12,6 +12,7 @@ const {_electron:electron}=require('playwright');const path=require('node:path')
   const errors=[];page.on('pageerror',e=>{errors.push(e.message);console.error(e.message)});
   page.on('console',e=>{if(e.type()==='error')console.error('Renderer: '+e.text())});
   await ready(page);await page.getByRole('button',{name:'数据面板',exact:true}).waitFor();
+  console.log('Desktop workbench ready');
   assert.equal(await page.evaluate(()=>typeof require),'undefined');
   const result=await page.evaluate(async()=>{
    const get=async p=>(await fetch('/api'+p)).json();
@@ -22,6 +23,7 @@ const {_electron:electron}=require('playwright');const path=require('node:path')
   });
   assert(result.qgis?.available,JSON.stringify(result.qgis));
   assert(result.health.ok);assert.equal(result.demo,200);assert(result.count>0);
+  console.log('Local API and QGIS ready');
   const analysis=await page.evaluate(async()=>{
    const json=async(url,body,method='POST')=>{const r=await fetch('/api'+url,{method,headers:{'content-type':'application/json'},body:JSON.stringify(body)});if(!r.ok)throw new Error(await r.text());return r.json()};
    const layers=await (await fetch('/api/layers')).json();
@@ -37,13 +39,20 @@ const {_electron:electron}=require('playwright');const path=require('node:path')
    return {count:(await (await fetch('/api/layers')).json()).length,pdf:exported.url};
   });
   result.count=analysis.count;
+  console.log('Analysis and PDF export passed');
   const saved=path.resolve(__dirname,'../../.desktop-build/qa/desktop-export-'+process.platform+'.pdf');
   fs.mkdirSync(path.dirname(saved),{recursive:true});
-  const downloaded=app.evaluate(({session},file)=>new Promise(resolve=>{
-   session.defaultSession.once('will-download',(_,item)=>{item.setSavePath(file);item.once('done',(_,state)=>resolve(state))});
-  }),saved);
+  // Acknowledge registration before clicking: main/renderer IPC can otherwise
+  // race and leave a native save dialog waiting for a person on slower hosts.
+  await app.evaluate(({session},file)=>{
+   globalThis.__gaiaTestDownload=new Promise(resolve=>{
+    const timer=setTimeout(()=>resolve('timed-out'),120000);
+    session.defaultSession.once('will-download',(_,item)=>{item.setSavePath(file);item.once('done',(_,state)=>{clearTimeout(timer);resolve(state)})});
+   });
+  },saved);
   await page.evaluate(url=>{const a=document.createElement('a');a.href=url;a.download='GAIA-map.pdf';document.body.appendChild(a);a.click();a.remove()},analysis.pdf);
-  assert.equal(await downloaded,'completed');assert.equal(fs.readFileSync(saved).subarray(0,5).toString(),'%PDF-');
+  assert.equal(await app.evaluate(()=>globalThis.__gaiaTestDownload),'completed');assert.equal(fs.readFileSync(saved).subarray(0,5).toString(),'%PDF-');
+  console.log('Native file save passed');
 
   // Requests outside the private bridge cannot read the user's workspace.
   const readyDir=path.join(userData,'sessions');
