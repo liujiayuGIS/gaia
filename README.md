@@ -10,7 +10,9 @@
 
 ## 桌面安装
 
-[GitHub Releases 下载安装包](https://github.com/liujiayuGIS/geoagent-studio/releases)：macOS Apple Silicon / Intel 与 Windows x64。内置 Python 和 QGIS，首次启动在本机初始化环境，工作区独立保存。系统要求、签名状态、源码构建见 [桌面版说明](docs/DESKTOP.md)。
+[GitHub Releases 下载安装包](https://github.com/liujiayuGIS/gaia/releases)：目前提供 macOS Apple Silicon / Intel 预览版（macOS 15+）。Windows x64 源码已上传，安装包待原生验收；见 [交付状态](docs/DESKTOP_STATUS.md)。内置 Python 和 QGIS，首次启动在本机初始化环境，工作区独立保存。
+
+**第一次使用请看 [GAIA 用户手册](docs/USER_GUIDE.md)**（[离线 HTML 版](https://github.com/liujiayuGIS/gaia/releases/download/desktop-v0.5.0-beta.1-6feef3e/GAIA-User-Guide-zh-CN.html)）：从十分钟完成第一张地图开始，逐步学习模型配置、SHP / TIFF 导入、算法参数、图层排序、布局编辑、出图导出、审批恢复、记忆与代码工具。系统要求、签名状态、源码构建见 [桌面版说明](docs/DESKTOP.md)。
 
 ## 从源码启动
 
@@ -130,7 +132,7 @@ BASE_URL=http://127.0.0.1:8767 node scripts/gaia-ui-test.cjs
 
 ## 下一阶段与限制
 
-QGIS Processing 桥接、原生布局及工程/模板已实现（当前原生作业运行器使用 macOS Seatbelt；其他平台需配置受限运行器）。路网服务区、完整交互符号系统、大文件分块 / 空间数据库、检查点恢复、澄清后继续、跨项目工作流和独立 GIS 正确性基准仍待完善。
+QGIS Processing 桥接、原生布局及工程/模板已实现；macOS 使用 Seatbelt，Windows AppContainer 原生 GIS 与隔离测试已通过，但桌面安装包仍待验收。节点级检查点恢复已实现，不支持单个算法进程从中间像元续算。路网服务区的完整交互与核验、完整交互符号系统、大文件分块 / 空间数据库、澄清后继续、跨项目工作流和独立 GIS 正确性基准仍待完善。
 本版没有多用户鉴权、三维、Earth Engine、影像深度学习、自动在线数据检索、拓扑编辑和完整桌面工程互通。布局编辑已支持撤销/重做；数据成果保持独立保存。
 基础布局采用 EPSG:3857；专业专题 / 地形模板支持米制出图投影、分级图例、地名避让、等高线与定位插图，见 [真实数据制图](docs/PROFESSIONAL_MAPS.md)。导出不含在线底图；地图 TIFF 是排版图像，栅格数据导出才是地理参考 GeoTIFF。
 

@@ -27,7 +27,7 @@ Skills are procedural context. They do not grant filesystem, network or host ins
 
 The code pane and `execute_code` accept `plugin_id=python|qgis`, code, and input alias→layer-ID bindings. Python inputs are GeoDataFrames/Rasterio datasets; PyQGIS inputs are QgsMapLayers with `processing`, `context` and `feedback`. Write actual files under `output_dir`; set `outputs={name: path}` and optional `metrics={...}`. Geodata outputs become new layers and artifacts; other files remain downloadable. Save a name to retain a draft recipe. In v0.4, verify it against executable acceptance conditions, review the code/artifacts, then explicitly promote it into a typed tool. See [durable harness and memory](HARNESS_V04.md).
 
-Jobs copy declared inputs into an isolated directory, strip inherited API secrets, enforce time/log/file-size limits, kill the process group on cancellation and record code hashes/input hashes. The current restricted runner uses macOS Seatbelt: explicit runtime reads, job-only writes and denied network. Other operating systems require an equivalent restricted runner; they do not silently execute custom code without a sandbox.
+Jobs copy declared inputs into an isolated directory, strip inherited API secrets, enforce time/log/file-size limits and record code hashes/input hashes. macOS uses Seatbelt; Windows uses AppContainer and Job Object with private job directories and no network capabilities. Windows native GIS and isolation tests passed, but the desktop installer is still pending acceptance; see [desktop status](DESKTOP_STATUS.md). Unsupported systems do not silently execute custom code without an equivalent sandbox.
 
 ## Native cartography
 
