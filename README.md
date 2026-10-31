@@ -1,4 +1,4 @@
-# GAIA · v0.4.0
+# GAIA · 桌面预览版 v0.5.0-beta.1
 
 **Geospatial Artificial Intelligence Assistant · 地理空间人工智能助手盖亚**
 
@@ -8,7 +8,11 @@
 
 这是可运行的插件与原生 QGIS 验收实现。目标是逐步覆盖桌面 GIS 工作流；**目前还不等同于 QGIS / ArcGIS 全量能力，也没有经过与其他 Agent 的同条件性能评测。**
 
-## 启动
+## 桌面安装
+
+[GitHub Releases 下载安装包](https://github.com/liujiayuGIS/geoagent-studio/releases)：macOS Apple Silicon / Intel 与 Windows x64。内置 Python 和 QGIS，首次启动在本机初始化环境，工作区独立保存。系统要求、签名状态、源码构建见 [桌面版说明](docs/DESKTOP.md)。
+
+## 从源码启动
 
 需要 Python 3.12、Node.js 22，以及支持 WebGL 的浏览器。
 

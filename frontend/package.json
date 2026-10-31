@@ -8,10 +8,10 @@
     "build": "vite build"
   },
   "dependencies": {
+    "lucide-react": "0.468.0",
+    "maplibre-gl": "6.16.0",
     "react": "19.2.0",
-    "react-dom": "19.2.0",
-    "maplibre-gl": "5.10.0",
-    "lucide-react": "0.468.0"
+    "react-dom": "19.2.0"
   },
   "devDependencies": {
     "vite": "6.4.1"

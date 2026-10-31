@@ -21,7 +21,34 @@ function run(command,args,options={}){
  });
 }
 async function digest(file){const hash=crypto.createHash('sha256');for await(const chunk of fs.createReadStream(file))hash.update(chunk);return hash.digest('hex')}
+async function extractRuntime(archive,root){
+ const links=[];let invalid;
+ const inside=value=>value===root||value.startsWith(root+path.sep);
+ await tar.x({file:archive,cwd:root,strict:true,preservePaths:false,filter:(entry,header)=>{
+  if(path.isAbsolute(entry)||entry.replaceAll('\\','/').split('/').includes('..')){invalid=new Error('Unsafe archive path: '+entry);return false}
+  // Conda contains legitimate chains such as lib/icu/pkgdata.inc -> current/pkgdata.inc.
+  // Extract files first so tar never writes through a symlink, then create the links.
+  if(header.type==='SymbolicLink'){
+   const destination=path.resolve(root,entry),target=path.resolve(path.dirname(destination),header.linkpath);
+   if(path.isAbsolute(header.linkpath)||!inside(target)){invalid=new Error('Unsafe archive link: '+entry);return false}
+   links.push({destination,target:header.linkpath});return false;
+  }
+  return true;
+ }});
+ if(invalid)throw invalid;
+ for(const link of links){
+  await fsp.mkdir(path.dirname(link.destination),{recursive:true});
+  const parent=await fsp.realpath(path.dirname(link.destination));
+  if(!inside(parent))throw new Error('Unsafe archive link parent');
+  await fsp.symlink(link.target,link.destination);
+ }
+ for(const link of links){
+  try{if(!inside(await fsp.realpath(link.destination)))throw new Error('Archive link escapes runtime')}
+  catch(error){if(error.code!=='ENOENT')throw error}
+ }
+}
 async function installRuntime(resources,userData,status=()=>{},log=()=>{}){
+ userData=await fsp.realpath(userData);
  const source=path.join(resources,'runtime'),manifest=JSON.parse(await fsp.readFile(path.join(source,'manifest.json'),'utf8'));
  if(manifest.platform!==process.platform||manifest.arch!==process.arch)throw new Error('安装包与本机架构不符，请下载对应系统和处理器版本。');
  if(!/^[a-f0-9]{64}$/.test(manifest.sha256))throw new Error('运行环境清单无效。');
@@ -33,11 +60,10 @@ async function installRuntime(resources,userData,status=()=>{},log=()=>{}){
  await fsp.rm(root,{recursive:true,force:true});await fsp.mkdir(root,{recursive:true});
  status('首次启动：正在安装 Python 与 QGIS，可能需要几分钟…');
  // conda-pack environments cannot move after conda-unpack; extract at final path.
- await tar.x({file:archive,cwd:root,strict:true,preservePaths:false,
-  filter:(entry)=>!path.isAbsolute(entry)&&!entry.replaceAll('\\','/').split('/').includes('..')});
+ await extractRuntime(archive,root);
  const unpack=process.platform==='win32'?path.join(root,'Scripts/conda-unpack-script.py'):path.join(root,'bin/conda-unpack');
  await run(executable(root),[unpack],{env:environment(root),log});
  await run(executable(root),['-c','import fastapi,geopandas,rasterio,langgraph; print("GAIA_RUNTIME_READY")'],{env:environment(root),log});
  await fsp.writeFile(marker,manifest.sha256);return root;
 }
-module.exports={executable,environment,installRuntime,digest,run};
+module.exports={executable,environment,installRuntime,digest,run,extractRuntime};

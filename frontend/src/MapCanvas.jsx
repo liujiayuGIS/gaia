@@ -1,5 +1,5 @@
 import React,{useEffect,useRef} from 'react';
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 export default function MapCanvas({layers,selected,onSelect,fitRef,basemap,background,onReady,onError,onMove,onView}){
  const node=useRef(),map=useRef(),cache=useRef(new Map()),rasterColors=useRef(new Map()),markers=useRef([]),select=useRef(onSelect),first=useRef(true);select.current=onSelect;

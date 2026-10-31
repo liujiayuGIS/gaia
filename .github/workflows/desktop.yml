@@ -83,6 +83,13 @@ jobs:
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: npm --prefix desktop run dist -- ${{ matrix.flag }}
+      - name: Packaged application launch and persistence
+        run: |
+          export GAIA_SMOKE_DATA_DIR="$(cat .desktop-build/qa/smoke-user-data.txt)"
+          export GAIA_PACKAGED_EXECUTABLE="$PWD/.desktop-build/installers/mac/GAIA.app/Contents/MacOS/GAIA"
+          if [ "${{ matrix.arch }}" = arm64 ]; then export GAIA_PACKAGED_EXECUTABLE="$PWD/.desktop-build/installers/mac-arm64/GAIA.app/Contents/MacOS/GAIA"; fi
+          if [ "$RUNNER_OS" = Windows ]; then export GAIA_PACKAGED_EXECUTABLE="$PWD/.desktop-build/installers/win-unpacked/GAIA.exe"; fi
+          npm --prefix desktop run smoke
       - name: Checksums
         run: node -e "const fs=require('fs'),c=require('crypto'),p='.desktop-build/installers/';(async()=>{for(const f of fs.readdirSync(p).filter(x=>/\.(dmg|exe)$/.test(x))){const h=c.createHash('sha256');for await(const b of fs.createReadStream(p+f))h.update(b);fs.writeFileSync(p+f+'.sha256',h.digest('hex')+'  '+f+'\n')}})().catch(e=>{console.error(e);process.exit(1)})"
       - name: Upload tested installers to draft
