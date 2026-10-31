@@ -50,10 +50,6 @@ def test_local_code_isolation_and_qgis(tmp_path):
     from geoagent import formats,cartography
     from geoagent.plugins import PluginManager
     store=Store(tmp_path/'workspace')
-    qgis=PluginManager(store).get('qgis')
-    layer=formats.add_frame(store,'Test points',gpd.GeoDataFrame({'name':['A']},geometry=[Point(500000,4400000)],crs=32650),{})
-    result=qgis.execute(store,'qgis:native:buffer',{'INPUT':layer['id'],'DISTANCE':100},'desktop',threading.Event())
-    assert store.get_layer(result['layer_id'])['count']==1
     secret=tmp_path/'private.txt';secret.write_text('private')
     code=f"""from pathlib import Path
 import os,socket
@@ -67,6 +63,10 @@ outputs['test']=str(p)
 """
     answer=PluginManager(store).get('python').execute_code(store,code,{},'desktop',threading.Event())
     assert answer['scalars']=={'secret_present':False,'read':'denied','write':'denied','network':'denied'}
+    qgis=PluginManager(store).get('qgis')
+    layer=formats.add_frame(store,'Test points',gpd.GeoDataFrame({'name':['A']},geometry=[Point(500000,4400000)],crs=32650),{})
+    result=qgis.execute(store,'qgis:native:buffer',{'INPUT':layer['id'],'DISTANCE':100},'desktop',threading.Event())
+    assert store.get_layer(result['layer_id'])['count']==1
     cartography.update_layout(store,{'plugin_id':'qgis','focus_layer_id':result['layer_id'],'map_crs':'EPSG:32650','title':'Desktop native map','legend_position':'outside-right'})
     exported=cartography.export_map(store,'pdf',100)
     assert (store.root/exported['path']).read_bytes().startswith(b'%PDF')

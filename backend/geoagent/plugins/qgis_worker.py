@@ -120,9 +120,23 @@ def run(request,app):
 
 if __name__=='__main__':
     request=json.loads(Path(sys.argv[1]).read_text())
+    config=str(Path(request['job'])/'config')
+    if sys.platform=='win32':
+        from qgis.PyQt.QtCore import QSettings
+        # Headless jobs must not depend on the interactive user's registry profile.
+        QSettings.setDefaultFormat(QSettings.IniFormat)
+        QSettings.setPath(QSettings.IniFormat,QSettings.UserScope,config)
+        os.environ['QGIS_AUTH_DB_DIR_PATH']=config
     QgsApplication.setPrefixPath(str(PREFIX),True)
-    app=QgsApplication([],False,str(Path(request['job'])/'config'));app.initQgis()
+    app=QgsApplication([],False,config)
     try:
+        if sys.platform=='win32':
+            for name,initialize in [('providers',lambda:QgsProviderRegistry.instance()),
+                                    ('data items',lambda:QgsApplication.dataItemProviderRegistry()),
+                                    ('project',lambda:QgsProject.instance())]:
+                print('QGIS initializing '+name,file=sys.stderr,flush=True)
+                initialize()
+        app.initQgis()
         from processing.core.Processing import Processing
         Processing.initialize()
         result={'ok':True,'data':run(request,app)}
