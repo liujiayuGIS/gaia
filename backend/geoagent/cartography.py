@@ -24,7 +24,7 @@ from .formats import frame,raster_path,raster_preview
 from .store import now
 
 LOCK=threading.RLock()
-for f in ['/System/Library/Fonts/Supplemental/Arial Unicode.ttf','/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc']:
+for f in ['/System/Library/Fonts/Supplemental/Arial Unicode.ttf',str(Path(os.environ.get('SystemRoot','C:/Windows'))/'Fonts/msyh.ttc'),'/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc']:
     if Path(f).exists():
         font_manager.fontManager.addfont(f);matplotlib.rcParams['font.family']=font_manager.FontProperties(fname=f).get_name();break
 matplotlib.rcParams['axes.unicode_minus']=False

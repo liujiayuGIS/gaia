@@ -42,7 +42,9 @@ def test_projected_templates_export_with_focus_and_real_units(tmp_path,template,
     result=cartography.export_map(store,fmt,100)
     content=(store.root/result['path']).read_bytes()
     if fmt=='pdf':assert content.startswith(b'%PDF-')
-    else:assert Image.open(io.BytesIO(content)).size==(1169,827)
+    else:
+        # QGIS and Matplotlib quantize millimetres to pixels differently.
+        assert Image.open(io.BytesIO(content)).size==pytest.approx((1169,827),abs=1)
     assert result['layout']['map_crs']=='EPSG:32610'
 
 

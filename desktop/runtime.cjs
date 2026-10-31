@@ -24,7 +24,7 @@ async function digest(file){const hash=crypto.createHash('sha256');for await(con
 async function extractRuntime(archive,root){
  const links=[];let invalid;
  const inside=value=>value===root||value.startsWith(root+path.sep);
- await tar.x({file:archive,cwd:root,strict:true,preservePaths:false,filter:(entry,header)=>{
+ const unpack=new tar.Unpack({cwd:root,strict:true,preservePaths:false,filter:(entry,header)=>{
   if(path.isAbsolute(entry)||entry.replaceAll('\\','/').split('/').includes('..')){invalid=new Error('Unsafe archive path: '+entry);return false}
   // Conda contains legitimate chains such as lib/icu/pkgdata.inc -> current/pkgdata.inc.
   // Extract files first so tar never writes through a symlink, then create the links.
@@ -35,6 +35,11 @@ async function extractRuntime(archive,root){
   }
   return true;
  }});
+ await new Promise((resolve,reject)=>{
+  const input=fs.createReadStream(archive);
+  input.on('error',reject);unpack.on('error',error=>{input.destroy();reject(error)});
+  unpack.on('close',resolve);input.pipe(unpack);
+ });
  if(invalid)throw invalid;
  for(const link of links){
   await fsp.mkdir(path.dirname(link.destination),{recursive:true});

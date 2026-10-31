@@ -9,7 +9,7 @@ from qgis.PyQt.QtCore import Qt, QRectF, QSize, QSizeF
 from qgis.PyQt.QtGui import QColor, QFont, QFontDatabase, QPainter
 from qgis.PyQt.QtXml import QDomDocument
 
-FONT='Arial Unicode MS'
+FONT='Microsoft YaHei' if __import__('sys').platform=='win32' else 'Arial Unicode MS'
 INK='#293941'
 COLORS=['#edf3db','#c5d9ce','#8db3a4','#527e73','#265047']
 TERRAIN=['#536d50','#829e69','#bacb92','#e3d5a3','#c1a781','#aa8978','#d3c6bb','#f8f6f0']

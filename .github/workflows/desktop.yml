@@ -4,6 +4,8 @@ on:
   push:
     branches: [codex/desktop-v05]
     paths: ['desktop/**', 'backend/**', 'frontend/**', 'skills/**', 'scripts/package_desktop_runtime.py', '.github/workflows/desktop.yml', 'docs/DESKTOP.md', 'docs/THIRD_PARTY_NOTICES.md']
+env:
+  PYTHONUTF8: '1'
 permissions:
   contents: write
 concurrency:

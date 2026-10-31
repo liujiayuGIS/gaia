@@ -20,6 +20,21 @@ const {_electron:electron}=require('playwright');const path=require('node:path')
   });
   assert(result.qgis?.available,JSON.stringify(result.qgis));
   assert(result.health.ok);assert.equal(result.demo,200);assert(result.count>0);
+  const analysis=await page.evaluate(async()=>{
+   const json=async(url,body,method='POST')=>{const r=await fetch('/api'+url,{method,headers:{'content-type':'application/json'},body:JSON.stringify(body)});if(!r.ok)throw new Error(await r.text());return r.json()};
+   const layers=await (await fetch('/api/layers')).json();
+   const source=layers.find(l=>l.source==='demo'&&l.geometry_types?.includes('Point'));
+   const started=await json('/runs',{session_id:'desktop-smoke',message:'Desktop buffer verification',mode:'algorithm',algorithm_id:'buffer',arguments:{layer_id:source.id,distance_m:100}});
+   let run;const deadline=Date.now()+240000;
+   do{run=await (await fetch('/api/runs/'+started.id)).json();if(!['queued','running'].includes(run.status))break;await new Promise(r=>setTimeout(r,500))}while(Date.now()<deadline);
+   if(run.status!=='completed')throw new Error(JSON.stringify(run));
+   await json('/layout',{plugin_id:'qgis',title:'GAIA 桌面出图验证',focus_layer_id:run.output_layers[0],map_crs:'EPSG:32650',legend_position:'outside-right'},'PATCH');
+   const exported=await json('/layout/export',{format:'pdf',dpi:100});
+   const pdf=await (await fetch(exported.url)).arrayBuffer();
+   if(new TextDecoder().decode(pdf.slice(0,5))!=='%PDF-')throw new Error('Invalid exported PDF');
+   return {count:(await (await fetch('/api/layers')).json()).length,pdf:exported.url};
+  });
+  result.count=analysis.count;
   // Requests outside the private bridge cannot read the user's workspace.
   const readyDir=path.join(userData,'sessions');
   const ready=JSON.parse(fs.readFileSync(path.join(readyDir,fs.readdirSync(readyDir).find(x=>x.endsWith('.json'))),'utf8'));
