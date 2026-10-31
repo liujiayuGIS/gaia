@@ -280,7 +280,7 @@ def execute(request):
     project.viewSettings().setDefaultViewExtent(QgsReferencedRectangle(extent,crs))
     for backend_id,layer in loaded.items():layer.saveNamedStyle(str(styles/(backend_id+'.qml')))
     project_path=folder/'project.qgz';project.setFileName(str(project_path))
-    if not project.write():raise ValueError('QGIS 工程保存失败。')
+    if not project.write():raise ValueError('QGIS 工程保存失败：'+project.error())
     template=folder/'layout.qpt';layout.saveAsTemplate(str(template),QgsReadWriteContext())
     bundle=out/'qgis-project.zip'
     with zipfile.ZipFile(bundle,'w',zipfile.ZIP_DEFLATED) as archive:

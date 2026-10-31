@@ -21,10 +21,11 @@ function run(command,args,options={}){
  });
 }
 async function digest(file){const hash=crypto.createHash('sha256');for await(const chunk of fs.createReadStream(file))hash.update(chunk);return hash.digest('hex')}
-async function extractRuntime(archive,root){
- const links=[];let invalid;
+async function extractRuntime(archive,root,progress=()=>{}){
+ const links=[];let invalid;let entries=0;
  const inside=value=>value===root||value.startsWith(root+path.sep);
  const unpack=new tar.Unpack({cwd:root,strict:true,preservePaths:false,filter:(entry,header)=>{
+  if(++entries%2000===0)progress(entries);
   if(path.isAbsolute(entry)||entry.replaceAll('\\','/').split('/').includes('..')){invalid=new Error('Unsafe archive path: '+entry);return false}
   // Conda contains legitimate chains such as lib/icu/pkgdata.inc -> current/pkgdata.inc.
   // Extract files first so tar never writes through a symlink, then create the links.
@@ -65,9 +66,11 @@ async function installRuntime(resources,userData,status=()=>{},log=()=>{}){
  await fsp.rm(root,{recursive:true,force:true});await fsp.mkdir(root,{recursive:true});
  status('首次启动：正在安装 Python 与 QGIS，可能需要几分钟…');
  // conda-pack environments cannot move after conda-unpack; extract at final path.
- await extractRuntime(archive,root);
+ await extractRuntime(archive,root,count=>status('首次启动：正在解压 GIS 环境，已读取 '+count.toLocaleString()+' 个文件…'));
+ status('首次启动：正在校准 GIS 库路径，请保持应用打开…');
  const unpack=process.platform==='win32'?path.join(root,'Scripts/conda-unpack-script.py'):path.join(root,'bin/conda-unpack');
  await run(executable(root),[unpack],{env:environment(root),log});
+ status('首次启动：正在验证本机 GIS 环境…');
  await run(executable(root),['-c','import fastapi,geopandas,rasterio,langgraph; print("GAIA_RUNTIME_READY")'],{env:environment(root),log});
  await fsp.writeFile(marker,manifest.sha256);return root;
 }
