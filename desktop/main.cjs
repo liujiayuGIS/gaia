@@ -29,6 +29,7 @@ function createWindow(){
  window.loadURL(base?'gaia://app/':bootURL);
 }
 async function stopBackend(){
+ runtime.cancelRuntime();
  const process=child;child=null;base=null;if(!process)return;
  process.stdin?.end();
  await Promise.race([new Promise(resolve=>process.once('exit',resolve)),new Promise(resolve=>setTimeout(resolve,5000))]);

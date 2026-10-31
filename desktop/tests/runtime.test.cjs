@@ -1,7 +1,20 @@
 const {test}=require('node:test');const assert=require('node:assert/strict');const path=require('node:path');
 const {executable,environment}=require('../runtime.cjs');
 const fs=require('node:fs/promises');const os=require('node:os');const tar=require('tar');
-const {extractRuntime}=require('../runtime.cjs');
+const {extractRuntime,validateWindowsArchive,windowsEntrySafe}=require('../runtime.cjs');
+test('native Windows extraction rejects path escapes, devices, and links',async()=>{
+ for(const name of ['../escape','C:/escape','\\\\server\\share','safe/../escape','safe/file:stream','safe/.. /escape','NUL.txt'])
+  assert.equal(windowsEntrySafe({path:name,type:'File'}),false,name);
+ assert.equal(windowsEntrySafe({path:'Library/bin/python.dll',type:'File'}),true);
+ assert.equal(windowsEntrySafe({path:'link',type:'SymbolicLink'}),false);
+ assert.equal(windowsEntrySafe({path:'link',type:'Link'}),false);
+ const root=await fs.mkdtemp(path.join(os.tmpdir(),'gaia-windows-tar-'));
+ try{
+  await fs.writeFile(path.join(root,'runtime.txt'),'runtime');
+  const file=path.join(root,'env.tar.gz');await tar.c({file,gzip:true,cwd:root},['runtime.txt']);
+  await validateWindowsArchive(file);
+ }finally{await fs.rm(root,{recursive:true,force:true})}
+});
 test('Conda symlink chains extract without writing through links',{skip:process.platform==='win32'},async()=>{
  const tmp=await fs.mkdtemp(path.join(os.tmpdir(),'gaia-tar-'));
  try{

@@ -1,5 +1,6 @@
 const fs=require('node:fs');const fsp=fs.promises;const path=require('node:path');
 const crypto=require('node:crypto');const {spawn}=require('node:child_process');const tar=require('tar');
+const preparing=new Set();
 
 function executable(prefix,platform=process.platform){return path.join(prefix,platform==='win32'?'python.exe':'bin/python')}
 function environment(prefix,extra={},platform=process.platform){
@@ -14,13 +15,31 @@ function environment(prefix,extra={},platform=process.platform){
 }
 function run(command,args,options={}){
  return new Promise((resolve,reject)=>{
-  const child=spawn(command,args,{windowsHide:true,...options});let error='';
+  const child=spawn(command,args,{windowsHide:true,...options});preparing.add(child);let error='';
   child.stdout?.on('data',data=>options.log?.(data.toString()));
   child.stderr?.on('data',data=>{error=(error+data).slice(-6000);options.log?.(data.toString())});
-  child.on('error',reject);child.on('exit',code=>code===0?resolve():reject(new Error('运行环境准备失败（'+code+'）：'+error)));
+  child.on('error',err=>{preparing.delete(child);reject(err)});child.on('exit',code=>{preparing.delete(child);code===0?resolve():reject(new Error('运行环境准备失败（'+code+'）：'+error))});
  });
 }
 async function digest(file){const hash=crypto.createHash('sha256');for await(const chunk of fs.createReadStream(file))hash.update(chunk);return hash.digest('hex')}
+function cancelRuntime(){for(const child of preparing)child.kill()}
+function windowsEntrySafe(entry){
+ const parts=entry.path.replaceAll('\\','/').split('/');
+ return ['File','Directory'].includes(entry.type)&&!path.win32.isAbsolute(entry.path)&&
+  !parts.some(p=>p==='..'||p.includes(':')||(p!=='.'&&/[. ]$/.test(p))||/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\.|$)/i.test(p));
+}
+async function validateWindowsArchive(archive,progress=()=>{}){
+ let invalid,count=0;
+ const parser=new tar.Parser({strict:true,onReadEntry:entry=>{
+  if(!windowsEntrySafe(entry))invalid=new Error('Unsafe Windows archive entry: '+entry.path);
+  if(++count%2000===0)progress(count);entry.resume();
+ }});
+ await new Promise((resolve,reject)=>{
+  const input=fs.createReadStream(archive);input.on('error',reject);
+  parser.on('error',error=>{input.destroy();reject(error)});parser.on('end',resolve);input.pipe(parser);
+ });
+ if(invalid)throw invalid;
+}
 async function extractRuntime(archive,root,progress=()=>{}){
  const links=[];let invalid;let entries=0;
  const inside=value=>value===root||value.startsWith(root+path.sep);
@@ -66,7 +85,12 @@ async function installRuntime(resources,userData,status=()=>{},log=()=>{}){
  await fsp.rm(root,{recursive:true,force:true});await fsp.mkdir(root,{recursive:true});
  status('首次启动：正在安装 Python 与 QGIS，可能需要几分钟…');
  // conda-pack environments cannot move after conda-unpack; extract at final path.
- await extractRuntime(archive,root,count=>status('首次启动：正在解压 GIS 环境，已读取 '+count.toLocaleString()+' 个文件…'));
+ const nativeTar=path.join(process.env.SystemRoot||'C:\\Windows','System32','tar.exe');
+ if(process.platform==='win32'&&fs.existsSync(nativeTar)){
+  await validateWindowsArchive(archive,count=>status('首次启动：正在检查 GIS 文件目录，已读取 '+count.toLocaleString()+' 项…'));
+  status('首次启动：正在展开本机 GIS 环境，请保持应用打开…');
+  await run(nativeTar,['-xzf',archive,'-C',root],{log});
+ }else await extractRuntime(archive,root,count=>status('首次启动：正在解压 GIS 环境，已读取 '+count.toLocaleString()+' 个文件…'));
  status('首次启动：正在校准 GIS 库路径，请保持应用打开…');
  const unpack=process.platform==='win32'?path.join(root,'Scripts/conda-unpack-script.py'):path.join(root,'bin/conda-unpack');
  await run(executable(root),[unpack],{env:environment(root),log});
@@ -74,4 +98,4 @@ async function installRuntime(resources,userData,status=()=>{},log=()=>{}){
  await run(executable(root),['-c','import fastapi,geopandas,rasterio,langgraph; print("GAIA_RUNTIME_READY")'],{env:environment(root),log});
  await fsp.writeFile(marker,manifest.sha256);return root;
 }
-module.exports={executable,environment,installRuntime,digest,run,extractRuntime};
+module.exports={executable,environment,installRuntime,digest,run,extractRuntime,validateWindowsArchive,windowsEntrySafe,cancelRuntime};

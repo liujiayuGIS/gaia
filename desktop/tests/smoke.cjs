@@ -2,9 +2,7 @@
 const {_electron:electron}=require('playwright');const path=require('node:path');const fs=require('node:fs');const os=require('node:os');const assert=require('node:assert/strict');
 (async()=>{
  const userData=process.env.GAIA_SMOKE_DATA_DIR||fs.mkdtempSync(path.join(os.tmpdir(),'gaia-desktop-test-'));
- // Hosted Intel/Windows runners have no hardware GPU. Exercise the same map
- // using Chromium's explicit software driver only in automated test sessions.
- const graphics=process.env.CI&&process.arch==='x64'?['--use-gl=angle','--use-angle=swiftshader-webgl','--enable-unsafe-swiftshader']:[];
+ const graphics=process.env.GAIA_SMOKE_NO_GPU==='1'?['--use-gl=angle','--use-angle=swiftshader-webgl','--enable-unsafe-swiftshader']:[];
  const launch=()=>electron.launch({...(process.env.GAIA_PACKAGED_EXECUTABLE?{executablePath:process.env.GAIA_PACKAGED_EXECUTABLE,args:graphics}:{args:[path.resolve(__dirname,'..'),...graphics]}),
   env:{...process.env,GAIA_DESKTOP_DATA_DIR:userData},timeout:600000});
  const ready=page=>Promise.race([page.waitForURL('gaia://app/',{timeout:600000}),page.locator('#retry').waitFor({state:'visible',timeout:600000}).then(async()=>{throw new Error('Desktop startup: '+await page.locator('#status').innerText())})]);
@@ -64,6 +62,9 @@ const {_electron:electron}=require('playwright');const path=require('node:path')
   const address=JSON.parse(fs.readFileSync(path.join(readyDir,fs.readdirSync(readyDir).filter(x=>x.endsWith('.json')).sort((a,b)=>fs.statSync(path.join(readyDir,b)).mtimeMs-fs.statSync(path.join(readyDir,a)).mtimeMs)[0]),'utf8'));
   assert.equal((await fetch('http://127.0.0.1:'+address.port+'/api/layers')).status,401);
   await page.reload();await page.waitForSelector('.map-canvas[data-ready="true"]',{timeout:120000});
+  const renderer=await page.locator('.map-canvas').getAttribute('data-renderer');
+  if(process.env.GAIA_SMOKE_NO_GPU==='1')assert.equal(renderer,'leaflet');
+  console.log('Interactive map ready: '+renderer);
   fs.mkdirSync(path.resolve(__dirname,'../../.desktop-build/qa'),{recursive:true});
   await page.screenshot({path:path.resolve(__dirname,'../../.desktop-build/qa/desktop-'+process.platform+'-'+process.arch+'.png')});
   fs.writeFileSync(path.resolve(__dirname,'../../.desktop-build/qa/smoke-user-data.txt'),userData);

@@ -48,7 +48,10 @@ def main():
                 else:shutil.copy2(src,dest)
     archive=target/'runtime.tar.gz'
     subprocess.run([str(python),'-c','from conda_pack.cli import main; main()','-p',str(prefix),'-o',str(archive),'--force','--n-threads','4',
-                    '--exclude','share/gdb/auto-load/*'],check=True)
+                    '--exclude','share/gdb/auto-load/*',
+                    '--exclude','include/*','--exclude','Library/include/*',
+                    '--exclude','share/doc/*','--exclude','share/man/*',
+                    '--exclude','Library/share/doc/*','--exclude','Library/share/man/*'],check=True)
     with archive.open('rb') as stream:sha=hashlib.file_digest(stream,'sha256').hexdigest()
     manifest={'schema':1,'platform':sys.platform,'arch':'arm64' if platform.machine().lower() in ('arm64','aarch64') else 'x64',
               'python':'3.12','qgis':'3.44.14','sha256':sha,'bytes':archive.stat().st_size}
