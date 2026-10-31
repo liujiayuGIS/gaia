@@ -73,7 +73,7 @@ def execute(python, worker, request, job, cancel=None, timeout=120, restricted=T
         if folder.exists():env[key]=str(folder)
     request={**request,'job':str(job),'timeout':timeout}
     request_path=job/'request.json';request_path.write_text(json.dumps(request,ensure_ascii=False))
-    command=[str(python),'-I','-B',str(CODE/worker),str(request_path)]
+    command=[str(python),'-I','-B','-X','utf8',str(CODE/worker),str(request_path)]
     sandbox='none'
     windows_sandbox=restricted and sys.platform=='win32'
     if restricted and not windows_sandbox:
