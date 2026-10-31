@@ -129,18 +129,22 @@ if __name__=='__main__':
         os.environ['QGIS_AUTH_DB_DIR_PATH']=config
     QgsApplication.setPrefixPath(str(PREFIX),True)
     app=QgsApplication([],False,config)
+    stage='QGIS initialization'
     try:
         if sys.platform=='win32':
             for name,initialize in [('providers',lambda:QgsProviderRegistry.instance()),
                                     ('data items',lambda:QgsApplication.dataItemProviderRegistry()),
                                     ('project',lambda:QgsProject.instance())]:
+                stage='QGIS '+name
                 print('QGIS initializing '+name,file=sys.stderr,flush=True)
                 initialize()
+        stage='QGIS initQgis (authentication/network)'
         app.initQgis()
+        stage='QGIS processing'
         from processing.core.Processing import Processing
         Processing.initialize()
         result={'ok':True,'data':run(request,app)}
-    except Exception as exc:result={'ok':False,'error':str(exc),'traceback':traceback.format_exc(limit=8)}
+    except Exception as exc:result={'ok':False,'error':stage+': '+str(exc),'traceback':traceback.format_exc(limit=8)}
     print('GEOAGENT_RESULT:'+json.dumps(result,ensure_ascii=False,default=str),flush=True)
     QgsProject.instance().clear()
     app.exitQgis()
