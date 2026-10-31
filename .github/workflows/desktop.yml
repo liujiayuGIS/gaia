@@ -1,0 +1,113 @@
+name: GAIA desktop
+on:
+  workflow_dispatch:
+  push:
+    branches: [codex/desktop-v05]
+    paths: ['desktop/**', 'backend/**', 'frontend/**', 'skills/**', 'scripts/package_desktop_runtime.py', '.github/workflows/desktop.yml', 'docs/DESKTOP.md', 'docs/THIRD_PARTY_NOTICES.md']
+permissions:
+  contents: write
+concurrency:
+  group: desktop-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(node -p "require('./desktop/package.json').version")
+          TAG="desktop-v$VERSION-${GITHUB_SHA:0:7}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --draft --prerelease --target "$GITHUB_SHA" --title "GAIA $VERSION · 桌面预览版" --notes-file docs/DESKTOP.md
+  build:
+    needs: release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+            flag: --mac --arm64
+          - runner: macos-15-intel
+            arch: x64
+            flag: --mac --x64
+          - runner: windows-2022
+            arch: x64
+            flag: --win --x64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            desktop/package-lock.json
+            frontend/package-lock.json
+      - uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-file: desktop/environment.yml
+          cache-environment: true
+          cache-downloads: true
+      - name: Build frontend and desktop
+        run: |
+          npm --prefix frontend ci --ignore-scripts
+          npm --prefix frontend run build
+          npm --prefix desktop ci
+          npm --prefix desktop test
+      - name: Bundle Python and QGIS
+        run: micromamba run -n gaia-desktop python scripts/package_desktop_runtime.py --prefix "$MAMBA_ROOT_PREFIX/envs/gaia-desktop" --skip-create
+      - name: Native GIS and sandbox tests
+        env:
+          PYTHONPATH: backend
+          GAIA_DESKTOP_NATIVE_TESTS: '1'
+          GEOAGENT_WORKSPACE: .desktop-build/test-workspace
+          GEOAGENT_CACHE_DIR: .desktop-build/test-cache
+        run: |
+          export GIS_QGIS_PYTHON="$MAMBA_ROOT_PREFIX/envs/gaia-desktop/bin/python"
+          if [ "$RUNNER_OS" = Windows ]; then export GIS_QGIS_PYTHON="$MAMBA_ROOT_PREFIX/envs/gaia-desktop/python.exe"; fi
+          export GIS_PYTHON="$GIS_QGIS_PYTHON"
+          micromamba run -n gaia-desktop python -m pytest backend/tests/test_desktop.py -q
+      - name: First launch, private API, and restart persistence
+        run: npm --prefix desktop run smoke
+      - name: Create installer
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npm --prefix desktop run dist -- ${{ matrix.flag }}
+      - name: Checksums
+        run: node -e "const fs=require('fs'),c=require('crypto'),p='.desktop-build/installers/';(async()=>{for(const f of fs.readdirSync(p).filter(x=>/\.(dmg|exe)$/.test(x))){const h=c.createHash('sha256');for await(const b of fs.createReadStream(p+f))h.update(b);fs.writeFileSync(p+f+'.sha256',h.digest('hex')+'  '+f+'\n')}})().catch(e=>{console.error(e);process.exit(1)})"
+      - name: Upload tested installers to draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.release.outputs.tag }}
+        run: |
+          for FILE in .desktop-build/installers/*.dmg .desktop-build/installers/*.exe .desktop-build/installers/*.sha256; do
+            [ -f "$FILE" ] && gh release upload "$TAG" "$FILE" --clobber
+          done
+      - name: Preserve failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-diagnostics-${{ matrix.runner }}
+          path: |
+            .desktop-build/qa
+            .desktop-build/test-workspace/jobs/*/stderr.log
+          retention-days: 7
+  publish:
+    needs: [release, build]
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.release.outputs.tag }}
+        run: gh release edit "$TAG" --draft=false --prerelease

@@ -2,11 +2,17 @@
 import json
 import math
 from pathlib import Path
-import resource
+import os
+try:import resource
+except ImportError:resource=None
 import sys
 import traceback
 
-PREFIX=Path(sys.prefix)
+PREFIX=Path(os.environ.get('QGIS_PREFIX_PATH',sys.prefix))
+if sys.platform=='win32':
+    _dll_directory=os.add_dll_directory(str(PREFIX/'bin'))
+    sys.path.insert(0,str(PREFIX/'python'))
+    sys.path.insert(0,str(PREFIX/'python/plugins'))
 sys.path.insert(0,str(PREFIX/'share/qgis/python'))
 sys.path.insert(0,str(PREFIX/'share/qgis/python/plugins'))
 sys.path.insert(0,str(Path(__file__).parent))
@@ -98,8 +104,9 @@ def run(request,app):
         if not ok:raise ValueError(message)
         result=processing.run(algorithm.id(),arguments,context=context,feedback=feedback)
     elif request['operation']=='code':
-        resource.setrlimit(resource.RLIMIT_CPU,(request['timeout'],request['timeout']+2))
-        resource.setrlimit(resource.RLIMIT_FSIZE,(100*1024*1024,100*1024*1024))
+        if resource:
+            resource.setrlimit(resource.RLIMIT_CPU,(request['timeout'],request['timeout']+2))
+            resource.setrlimit(resource.RLIMIT_FSIZE,(100*1024*1024,100*1024*1024))
         scope={'__name__':'__geoagent_analysis__','inputs':layers_from_paths(request.get('inputs',{})),
                'input_paths':request.get('inputs',{}),'output_dir':job/'outputs','outputs':{},'metrics':{},
                'processing':processing,'context':context,'feedback':feedback}

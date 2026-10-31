@@ -1,0 +1,15 @@
+name: gaia-desktop
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - qgis=3.44.14
+  - numpy
+  - scipy
+  - geopandas
+  - rasterio
+  - pyarrow
+  - matplotlib
+  - reportlab
+  - pillow
+  - pip

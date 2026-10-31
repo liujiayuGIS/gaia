@@ -3,7 +3,8 @@ import contextlib
 import io
 import json
 from pathlib import Path
-import resource
+try:import resource
+except ImportError:resource=None
 import sys
 import traceback
 
@@ -16,8 +17,9 @@ def run(request):
         inputs[name]=rasterio.open(path) if Path(path).suffix.lower() in ('.tif','.tiff') else gpd.read_file(path)
     scope={'__name__':'__geoagent_analysis__','inputs':inputs,'input_paths':request.get('inputs',{}),
            'output_dir':Path(request['job'])/'outputs','outputs':{},'metrics':{}}
-    resource.setrlimit(resource.RLIMIT_CPU,(request['timeout'],request['timeout']+2))
-    resource.setrlimit(resource.RLIMIT_FSIZE,(100*1024*1024,100*1024*1024))
+    if resource:
+        resource.setrlimit(resource.RLIMIT_CPU,(request['timeout'],request['timeout']+2))
+        resource.setrlimit(resource.RLIMIT_FSIZE,(100*1024*1024,100*1024*1024))
     exec(compile(request['code'],'<workspace-analysis>','exec'),scope)
     outputs=[]
     for name,path in scope.get('outputs',{}).items():

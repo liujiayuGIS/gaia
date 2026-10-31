@@ -14,9 +14,21 @@ ROOT = Path(__file__).resolve().parents[3]
 CODE = Path(__file__).resolve().parent
 
 
+def cache_root():
+    return Path(os.environ.get('GEOAGENT_CACHE_DIR',ROOT/'.runtime'))
+
+
+def python_executable():
+    return Path(os.environ.get('GIS_PYTHON',sys.executable))
+
+
+def runtime_prefix(python):
+    return python.parent if python.name.lower().endswith('.exe') else python.parent.parent
+
+
 def qgis_python():
     configured = os.environ.get('GIS_QGIS_PYTHON')
-    candidates = [Path(configured)] if configured else [ROOT/'.runtime/qgis/bin/python',
+    candidates = [Path(configured)] if configured else [ROOT/'.runtime/qgis/bin/python',ROOT/'.runtime/qgis/python.exe',
         Path('/Applications/QGIS.app/Contents/MacOS/bin/python3')]
     return next((x for x in candidates if x.is_file()), None)
 
@@ -43,21 +55,28 @@ def copy_inputs(store, bindings, job):
 
 
 def execute(python, worker, request, job, cancel=None, timeout=120, restricted=True):
-    python=Path(python).absolute();prefix=python.parent.parent
-    env={'PATH':str(prefix/'bin')+':/usr/bin:/bin','LANG':'en_US.UTF-8',
+    python=Path(python).absolute();prefix=runtime_prefix(python)
+    qgis_prefix=prefix/'Library' if sys.platform=='win32' else prefix
+    paths=[prefix,prefix/'Library/bin',prefix/'Scripts',prefix/'bin']
+    paths+=([Path(os.environ.get('SystemRoot','C:/Windows'))/'System32'] if sys.platform=='win32' else [Path('/usr/bin'),Path('/bin')])
+    env={'PATH':os.pathsep.join(map(str,paths)),'LANG':'en_US.UTF-8',
         'TMPDIR':str(job/'tmp'),'XDG_CACHE_HOME':str(job/'cache'),'XDG_CONFIG_HOME':str(job/'config'),
         'MPLCONFIGDIR':str(job/'cache/matplotlib'),'QT_QPA_PLATFORM':'offscreen',
-        'QGIS_PREFIX_PATH':str(prefix),'QGIS_CUSTOM_CONFIG_PATH':str(job/'config'),
-        'PYTHONNOUSERSITE':'1','OPENBLAS_NUM_THREADS':'1','OMP_NUM_THREADS':'1'}
-    for folder in (prefix/'plugins',prefix/'lib/qt6/plugins',prefix/'lib/qt/plugins'):
+        'QGIS_PREFIX_PATH':str(qgis_prefix),'QGIS_CUSTOM_CONFIG_PATH':str(job/'config'),
+        'PYTHONNOUSERSITE':'1','OPENBLAS_NUM_THREADS':'1','OMP_NUM_THREADS':'1','PYTHONUTF8':'1'}
+    if sys.platform=='win32':
+        env.update(SystemRoot=os.environ.get('SystemRoot','C:/Windows'),TEMP=str(job/'tmp'),TMP=str(job/'tmp'),
+                   USERPROFILE=str(job/'config'),APPDATA=str(job/'config'),LOCALAPPDATA=str(job/'cache'))
+    for folder in (qgis_prefix/'plugins',qgis_prefix/'lib/qt6/plugins',qgis_prefix/'lib/qt/plugins'):
         if folder.exists():env['QT_PLUGIN_PATH']=str(folder);break
-    for key,folder in [('GDAL_DATA',prefix/'share/gdal'),('PROJ_DATA',prefix/'share/proj')]:
+    for key,folder in [('GDAL_DATA',qgis_prefix/'share/gdal'),('PROJ_DATA',qgis_prefix/'share/proj')]:
         if folder.exists():env[key]=str(folder)
     request={**request,'job':str(job),'timeout':timeout}
     request_path=job/'request.json';request_path.write_text(json.dumps(request,ensure_ascii=False))
     command=[str(python),'-I',str(CODE/worker),str(request_path)]
     sandbox='none'
-    if restricted:
+    windows_sandbox=restricted and sys.platform=='win32'
+    if restricted and not windows_sandbox:
         if sys.platform!='darwin' or not shutil.which('sandbox-exec'):
             raise ValueError('此主机缺少操作系统代码沙箱；请配置受限运行器后再执行自定义代码。')
         readable=[str(prefix),str(Path(python).resolve().parent.parent),str(CODE),str(job),sys.base_prefix,'/System/Library','/System/Cryptexes','/System/Volumes/Preboot/Cryptexes','/usr','/Library/Fonts',
@@ -69,7 +88,11 @@ def execute(python, worker, request, job, cancel=None, timeout=120, restricted=T
         sandbox='macOS Seatbelt: job-only writes, explicit runtime reads, network denied'
     stdout_path=job/'stdout.log';stderr_path=job/'stderr.log'
     with stdout_path.open('wb') as stdout,stderr_path.open('wb') as stderr:
-        process=subprocess.Popen(command,cwd=job,env=env,stdout=stdout,stderr=stderr,start_new_session=True)
+        if windows_sandbox:
+            from .windows_sandbox import launch
+            process=launch(command,job,env,stdout,stderr,[prefix,CODE],timeout)
+            sandbox='Windows AppContainer: no network, job and private container writes only'
+        else:process=subprocess.Popen(command,cwd=job,env=env,stdout=stdout,stderr=stderr,start_new_session=sys.platform!='win32')
         start=time.monotonic()
         try:
             while process.poll() is None:
@@ -79,9 +102,13 @@ def execute(python, worker, request, job, cancel=None, timeout=120, restricted=T
                     raise ValueError('执行日志超过2MB，已停止。')
                 time.sleep(.1)
         except BaseException:
-            try:os.killpg(process.pid,signal.SIGKILL)
+            try:
+                if sys.platform=='win32':process.kill()
+                else:os.killpg(process.pid,signal.SIGKILL)
             except ProcessLookupError:pass
             process.wait();raise
+        finally:
+            if windows_sandbox:process.close()
     if stdout_path.stat().st_size+stderr_path.stat().st_size>2*1024*1024:raise ValueError('执行日志超过2MB。')
     lines=stdout_path.read_text(errors='replace').splitlines()
     result=next((json.loads(x[len('GEOAGENT_RESULT:'):]) for x in reversed(lines) if x.startswith('GEOAGENT_RESULT:')),None)

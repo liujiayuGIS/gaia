@@ -105,11 +105,20 @@ def create_app(workspace=None):
 
     @app.middleware('http')
     async def local_origin(request: Request,call_next):
+        token=os.environ.get('GAIA_DESKTOP_TOKEN')
+        if token:
+            import hmac
+            if not hmac.compare_digest(request.headers.get('x-gaia-token',''),token):
+                return JSONResponse({'detail':'Desktop session authentication required.'},status_code=401)
         if request.method not in ('GET','HEAD','OPTIONS'):
             origin=request.headers.get('origin')
             if origin and urlparse(origin).netloc!=request.headers.get('host'):
                 return JSONResponse({'detail':'跨站写入请求被拒绝。'},status_code=403)
         return await call_next(request)
+
+    @app.on_event('shutdown')
+    async def stop_active_jobs():
+        for event in list(active.values()):event.set()
 
     @app.exception_handler(ValueError)
     async def bad_input(request,exc):

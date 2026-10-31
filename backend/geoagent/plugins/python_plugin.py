@@ -24,7 +24,7 @@ class PythonPlugin(AnalysisPlugin):
         job=runtime.job_folder(store);paths,_=runtime.copy_inputs(store,inputs,job)
         (job/'analysis.py').write_text(code)
         # Use this application's scientific environment, preserving pyvenv.cfg discovery.
-        python=runtime.ROOT/'.venv/bin/python'
+        python=runtime.python_executable()
         response=runtime.execute(python,'python_worker.py',{'code':code,'inputs':paths},job,cancel,timeout)
         result=runtime.publish(store,response,run_id,self.id,inputs,{'code_sha256':hashlib.sha256(code.encode()).hexdigest()})
         result['code']=code;return result

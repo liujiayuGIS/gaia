@@ -22,11 +22,11 @@ class QGISPlugin(AnalysisPlugin):
             if _CATALOG is not None:return _CATALOG
             python=runtime.qgis_python()
             if not python:raise ValueError('QGIS 插件尚未配置运行环境。')
-            cache=runtime.ROOT/'.runtime/qgis-catalog.json'
+            cache=runtime.cache_root()/'qgis-catalog.json'
             if cache.exists():
                 _CATALOG=json.loads(cache.read_text());return _CATALOG
             from types import SimpleNamespace
-            root=runtime.ROOT/'.runtime';root.mkdir(exist_ok=True)
+            root=runtime.cache_root();root.mkdir(parents=True,exist_ok=True)
             job=runtime.job_folder(SimpleNamespace(root=root))
             _CATALOG=runtime.execute(python,'qgis_worker.py',{'operation':'catalog'},job,timeout=90,restricted=False)
             cache.write_text(json.dumps(_CATALOG,ensure_ascii=False));return _CATALOG

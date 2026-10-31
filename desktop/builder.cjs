@@ -1,0 +1,24 @@
+const path=require('node:path');
+module.exports={
+ appId:'org.gaia.geospatial',productName:'GAIA',asar:true,
+ directories:{output:'../.desktop-build/installers',buildResources:'../.desktop-build/icons'},
+ files:['*.cjs','boot.html','boot.css','boot.js','package.json'],
+ extraResources:[
+  {from:'../.desktop-build/runtime',to:'runtime',filter:['runtime.tar.gz','manifest.json','licenses/**/*']},
+  {from:'../backend/geoagent',to:'server/backend/geoagent',filter:['**/*.py','!**/__pycache__/**']},
+  {from:'../frontend/dist',to:'server/frontend/dist'},
+  {from:'../skills',to:'server/skills'},
+  {from:'../docs/DESKTOP.md',to:'DESKTOP.md'},
+  {from:'../docs/THIRD_PARTY_NOTICES.md',to:'THIRD_PARTY_NOTICES.md'},
+  {from:'../frontend/public/gaia-icon.png',to:'gaia-icon.png'}
+ ],
+ artifactName:'GAIA-${version}-${os}-${arch}.${ext}',
+ mac:{target:['dmg'],category:'public.app-category.education',icon:'../.desktop-build/icons/icon.icns',
+      minimumSystemVersion:'15.0',identity:null,hardenedRuntime:false},
+ dmg:{title:'GAIA',format:'ULFO',contents:[{x:150,y:180},{x:410,y:180,type:'link',path:'/Applications'}]},
+ win:{target:['nsis'],icon:'../.desktop-build/icons/icon.ico',signAndEditExecutable:true},
+ nsis:{oneClick:false,perMachine:false,allowElevation:false,allowToChangeInstallationDirectory:true,
+       createDesktopShortcut:true,createStartMenuShortcut:true,deleteAppDataOnUninstall:false,
+       differentialPackage:false,preCompressedFileExtensions:['.tar.gz']},
+ npmRebuild:false,publish:null
+};
