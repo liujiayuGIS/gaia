@@ -47,7 +47,7 @@ def main():
                 if src.is_dir():shutil.copytree(src,dest,dirs_exist_ok=True)
                 else:shutil.copy2(src,dest)
     archive=target/'runtime.tar.gz'
-    subprocess.run([str(python),'-c','from conda_pack.cli import main; main()','-p',str(prefix),'-o',str(archive),'--force','--n-threads','4',
+    subprocess.run([str(python),str(ROOT/'desktop/pack_runtime.py'),'-p',str(prefix),'-o',str(archive),'--force','--n-threads','4',
                     '--exclude','share/gdb/auto-load/*',
                     '--exclude','include/*','--exclude','Library/include/*',
                     '--exclude','share/doc/*','--exclude','share/man/*',
