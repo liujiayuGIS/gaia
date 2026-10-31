@@ -72,8 +72,9 @@ def validate_result(store,name,data,requirements=None):
                 else:errors.append('工具后置校验失败：'+key)
     if name=='execute_code' and not layers and not candidates and not data.get('scalars'):
         errors.append('代码没有发布图层、文件或统计结果')
-    return {'passed':not errors,'layers':layers,'artifacts':artifacts,'errors':errors,'warnings':warnings,
-            'scope':'结构、空间数据有效性、文件完整性与声明的验收条件；不替代领域方法或视觉审核'}
+    from .quality import merge_report
+    return merge_report({'passed':not errors,'layers':layers,'artifacts':artifacts,'errors':errors,'warnings':warnings,
+            'scope':'结构、空间数据有效性、文件完整性、声明的验收条件及适用的独立核验'},data)
 
 
 def validate_run(store,run):
@@ -94,7 +95,7 @@ def validate_run(store,run):
         try:report=check_layer(store,layer['id'],requirements.get('layer',{}) if layer['id']==published[-1]['id'] else {})
         except Exception as exc:report={'passed':False,'layer_id':layer['id'],'errors':[str(exc)],'warnings':[]}
         layers.append(report);errors.extend(report['errors']);warnings.extend(report['warnings'])
-    exports=[x for x in store.objects('exports') if x.get('run_id')==run['id']]
+    exports=[x for x in store.objects('exports') if x.get('run_id')==run['id'] and not x.get('superseded_by')]
     formats={x.get('format') for x in exports}
     for fmt in requirements.get('formats',[]):
         if fmt not in formats:errors.append('缺少要求的导出格式：'+fmt)
@@ -102,5 +103,34 @@ def validate_run(store,run):
     for item in exports:
         path=(store.root/item['path']).resolve()
         if not path.is_relative_to(store.root.resolve()) or not path.is_file() or path.stat().st_size==0:errors.append('导出文件丢失或为空：'+item.get('name',''))
+    quality=[];unverified=[];seen=set()
+    for item in store.objects('quality_reports'):
+        if item.get('run_id')!=run['id']:continue
+        domain=item['domain'];key=item['preflight']['fingerprint']
+        if key in seen:continue
+        seen.add(key);quality.append(item)
+        if domain.get('output_layer_id') and domain.get('output_hash'):
+            try:
+                if Memory(store).fingerprint(domain['output_layer_id'])[0]!=domain['output_hash']:errors.append('成果文件发生变化，独立核验报告已失效。')
+            except Exception as exc:errors.append(str(exc))
+        errors.extend(domain.get('errors',[]));warnings.extend(item['preflight'].get('warnings',[])+domain.get('warnings',[]))
+        unverified.extend(item['preflight'].get('unverified',[])+domain.get('unverified',[]))
+    code_outputs=set()
+    for step in store.steps(run['id']):
+        if step.get('name')=='execute_code' and step.get('result',{}).get('success'):
+            code_outputs.update(result_layers(step['result'].get('data',{})))
+    verified={q['domain'].get('output_layer_id') for q in quality if q['domain'].get('passed') and q['domain'].get('coverage')=='complete_within_scope'}
+    if code_outputs-verified:
+        message='自定义代码成果尚无完整的独立领域核验：'+', '.join(sorted(code_outputs-verified))
+        unverified.append(message)
+        if (run.get('analysis_context') or {}).get('verification')=='strict':errors.append(message)
+    maps=[]
+    for item in exports:
+        if not item.get('map_review_id'):continue
+        review=store.object('map_reviews',item['map_review_id']);maps.append({'review_id':review['id'],'preview_url':review['preview_url'],**review['report']})
+        errors.extend(review['report']['errors']);warnings.extend(review['report']['warnings']);unverified.extend(review['report']['unverified'])
+        if run.get('mode')=='model' and run.get('vision_enabled',True) and review['visual_review']['status']!='pass':
+            errors.append('导出地图尚未通过视觉审阅，请 inspect_map(export_id='+item['id']+') 后记录观察或修改重出图。')
     return {'passed':not errors,'errors':list(dict.fromkeys(errors)),'warnings':list(dict.fromkeys(warnings)),
-            'layers':layers,'artifact_count':len(exports),'requirements':requirements}
+            'unverified':list(dict.fromkeys(unverified)),'quality_reports':quality,'map_reviews':maps,
+            'layers':layers,'artifact_count':len(exports),'requirements':requirements,'report_url':f"/api/runs/{run['id']}/quality"}

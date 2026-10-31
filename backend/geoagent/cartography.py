@@ -92,41 +92,40 @@ def position(value):
     return {'top-left':(.07,.9),'top-right':(.93,.9),'bottom-left':(.07,.09),'bottom-right':(.93,.09)}[value]
 
 
-def render_map(store,fmt='svg',dpi=150,layer_ids=None,overrides=None,preview=False):
+def render_map(store,fmt='svg',dpi=150,layer_ids=None,overrides=None,preview=False,evidence=None):
     if fmt not in ('png','jpeg','jpg','tiff','tif','svg','pdf'):raise ValueError('支持 PNG、JPEG、TIFF、SVG 和 PDF。')
     if dpi not in (100,150,200,300):raise ValueError('DPI 支持 100、150、200、300。')
     config=Layout.model_validate({**get_layout(store),**(overrides or {})})
-    layers=[x for x in store.layers() if (not layer_ids or x['id'] in layer_ids) and x['style'].get('visible',True)]
+    layers=[x for x in store.ordered_layers() if (not layer_ids or x['id'] in layer_ids) and x['style'].get('visible',True)]
     if not layers:raise ValueError('请先导入或生成可见图层。')
     if config.plugin_id!='python':
         from .plugins import PluginManager
         renderer=PluginManager(store).choose('cartography',config.plugin_id)
-        return renderer.render(store,config,fmt,dpi,layers,preview=preview)
+        content=renderer.render(store,config,fmt,dpi,layers,preview=preview)
+        if evidence is not None:evidence.update(getattr(renderer,'render_evidence',{}))
+        return content
     if config.template!='standard':
         from .professional import render
         return render(store,config,layers,fmt,dpi)
-    def draw_order(layer):
-        if layer.get('kind')=='raster':return 0
-        types=' '.join(layer.get('geometry_types',[]))
-        return 3 if 'Point' in types else 2 if 'Line' in types else 1
-    layers.sort(key=draw_order)
     dimensions={'A4':(11.69,8.27),'A3':(16.54,11.69)}[config.paper]
     if config.orientation=='portrait':dimensions=dimensions[::-1]
     with LOCK:
         fig=plt.figure(figsize=dimensions,facecolor='white');ax=fig.add_axes([.07,.12,.86,.73]);ax.set_facecolor('#f5f8fa')
         patches=[];colorbar=None
         try:
-            for layer in layers:
+            for index,layer in enumerate(reversed(layers),start=1):
+                # Keep the entire data stack beneath map furniture and axes.
+                z=index/(len(layers)+1)
                 if layer.get('kind')=='raster':
                     with rasterio.open(raster_path(store,layer['id'])) as src,WarpedVRT(src,crs='EPSG:3857') as vrt:
                         from PIL import Image
                         rgba=np.asarray(Image.open(io.BytesIO(raster_preview(store,layer['id'],1600))))
-                        ax.imshow(rgba,extent=[vrt.bounds.left,vrt.bounds.right,vrt.bounds.bottom,vrt.bounds.top],origin='upper',alpha=layer['style'].get('opacity',.85))
+                        ax.imshow(rgba,extent=[vrt.bounds.left,vrt.bounds.right,vrt.bounds.bottom,vrt.bounds.top],origin='upper',alpha=layer['style'].get('opacity',.85),zorder=z)
                 else:
                     gdf=frame(store,layer['id']).to_crs(3857)
                     if gdf.empty:continue
                     style=layer['style'];color=style.get('color','#397eab');field=style.get('field')
-                    options={'ax':ax,'edgecolor':color,'linewidth':.7,'alpha':style.get('opacity',.25 if gdf.geom_type.str.contains('Polygon').all() else 1),'markersize':38}
+                    options={'ax':ax,'edgecolor':color,'linewidth':.7,'alpha':style.get('opacity',.25 if gdf.geom_type.str.contains('Polygon').all() else 1),'markersize':38,'zorder':z}
                     if gdf.geom_type.str.contains('Point').all():options.update(alpha=style.get('opacity',1),edgecolor='white',linewidth=.8)
                     if field and field in gdf and np.issubdtype(gdf[field].dtype,np.number):
                         cmap=LinearSegmentedColormap.from_list('layer',['#d8e8f2',color]);gdf.plot(column=field,cmap=cmap,**options)
@@ -134,8 +133,8 @@ def render_map(store,fmt='svg',dpi=150,layer_ids=None,overrides=None,preview=Fal
                     else:gdf.plot(color=color,**options)
                     if style.get('labels','站' in layer['name']) and 'name' in gdf.columns and len(gdf)<=50:
                         for _,r in gdf.iterrows():
-                            p=r.geometry.representative_point();ax.annotate(str(r['name']),[p.x,p.y],xytext=(4,5),textcoords='offset points',fontsize=7,color='#213b51')
-                patches.append(Patch(facecolor=layer['style'].get('color','#397eab'),label=layer['name']))
+                            p=r.geometry.representative_point();ax.annotate(str(r['name']),[p.x,p.y],xytext=(4,5),textcoords='offset points',fontsize=7,color='#213b51',zorder=z+.1/(len(layers)+1))
+                patches.insert(0,Patch(facecolor=layer['style'].get('color','#397eab'),label=layer['name']))
             if config.extent:
                 x0,y0,x1,y1=Transformer.from_crs(4326,3857,always_xy=True).transform_bounds(*config.extent)
                 ax.set_xlim(x0,x1);ax.set_ylim(y0,y1)
@@ -166,7 +165,19 @@ def render_map(store,fmt='svg',dpi=150,layer_ids=None,overrides=None,preview=Fal
 
 
 def export_map(store,fmt='pdf',dpi=150,layer_ids=None,run_id=None):
-    content=render_map(store,fmt,dpi,layer_ids)
+    evidence={};content=render_map(store,fmt,dpi,layer_ids,evidence=evidence)
     export_id=uuid.uuid4().hex;folder=store.root/'exports';folder.mkdir(exist_ok=True);path=folder/f'{export_id}.{fmt}';path.write_bytes(content)
     result={'id':export_id,'name':get_layout(store)['title']+'.'+fmt,'format':fmt,'dpi':dpi,'created_at':now(),'run_id':run_id,'plugin_id':get_layout(store).get('plugin_id','auto'),'url':f'/api/exports/{export_id}/download','layout':get_layout(store),'path':str(path.relative_to(store.root))}
+    from .map_quality import create_audit
+    preview=None
+    if not evidence.get('preview_path'):
+        preview=folder/(export_id+'-preview.png');preview.write_bytes(render_map(store,'png',150,layer_ids,preview=True))
+    audit=create_audit(store,evidence,result['layout'],run_id,export_id,preview)
+    result.update(map_review_id=audit['id'],quality={'cartography':audit['report']},preview_url=audit['preview_url'])
+    if run_id:
+        for old in store.objects('exports'):
+            if old.get('run_id')!=run_id or old.get('format')!=fmt or old.get('name')!=result['name'] or not old.get('map_review_id'):continue
+            review=store.object('map_reviews',old['map_review_id'])
+            if review['report']['errors'] or review['visual_review']['status']=='needs_revision':
+                old['superseded_by']=export_id;store.put_object('exports',old['id'],old)
     return store.put_object('exports',export_id,result)

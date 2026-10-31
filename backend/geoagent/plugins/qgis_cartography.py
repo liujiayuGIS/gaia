@@ -5,7 +5,7 @@ from pathlib import Path
 import shutil
 import zipfile
 from qgis.core import *
-from qgis.PyQt.QtCore import Qt, QRectF, QSize
+from qgis.PyQt.QtCore import Qt, QRectF, QSize, QSizeF
 from qgis.PyQt.QtGui import QColor, QFont, QFontDatabase, QPainter
 from qgis.PyQt.QtXml import QDomDocument
 
@@ -91,7 +91,7 @@ def execute(request):
         if not project.read(request['path']):raise ValueError('QGIS 无法重新打开工程。')
         reverse={v:k for k,v in json.loads(project.customVariables().get('geoagent_layer_map','{}')).items()}
         outputs=[];metadata=[]
-        for layer in project.mapLayers().values():
+        for layer in project.layerTreeRoot().layerOrder():
             if layer.id() not in reverse:continue
             if not layer.isValid():raise ValueError('工程图层失效：'+layer.name())
             path=Path(layer.source().split('|')[0]).resolve()
@@ -99,7 +99,8 @@ def execute(request):
             if isinstance(layer,QgsVectorLayer) or isinstance(layer,QgsRasterLayer):
                 style=out/(layer.id()+'.qml');layer.saveNamedStyle(str(style))
                 outputs.append({'name':layer.name(),'path':str(path),'allow_file_only':True})
-                metadata.append({'backend_id':reverse.get(layer.id(),layer.id()),'style_path':str(style)})
+                metadata.append({'backend_id':reverse.get(layer.id(),layer.id()),'style_path':str(style),
+                                 'visible':project.layerTreeRoot().findLayer(layer.id()).isVisible()})
         return {'outputs':outputs,'layer_metadata':metadata,'qgis_version':Qgis.QGIS_VERSION}
     config=request['layout'];paper=config.get('paper','A4');landscape=config.get('orientation','landscape')=='landscape'
     folder=out/'project';data=folder/'data';styles=folder/'styles'
@@ -111,6 +112,12 @@ def execute(request):
         if not layer.isValid():raise ValueError('QGIS 图层失效：'+meta['name'])
         if isinstance(layer,QgsVectorLayer):vector_style(layer,meta)
         project.addMapLayer(layer);loaded[meta['id']]=layer;original[meta['id']]=meta;bindings[meta['id']]=layer.id()
+    # QGIS inserts new tree nodes at the top; restore the workspace's explicit stack.
+    root=project.layerTreeRoot()
+    for meta in request.get('layers',[]):
+        node=root.findLayer(loaded[meta['id']].id());clone=node.clone()
+        root.removeChildNode(node);root.addChildNode(clone)
+        clone.setItemVisibilityChecked(meta['style'].get('visible',True))
     focus_id=config.get('focus_layer_id')
     candidates=[loaded[x] for x in request.get('map_layers',[]) if x in loaded]
     if focus_id and focus_id in loaded:candidates=[loaded[focus_id]]
@@ -125,14 +132,15 @@ def execute(request):
         raster_style(focus,original.get(focus_id,{}))
         shade=QgsRasterLayer(focus.source(),'Hillshade')
         shade.setRenderer(QgsHillshadeRenderer(shade.dataProvider(),1,315,45));shade.setBlendMode(QPainter.CompositionMode_Multiply);shade.setOpacity(.4)
+        shade.setCustomProperty('gaia/legend_exempt_reason','地形阴影仅用于明暗塑形，无独立定量图例。')
         project.addMapLayer(shade)
         contour_path=data/'contours.gpkg'
         processing.run('gdal:contour',{'INPUT':focus.source(),'BAND':1,'INTERVAL':float(config.get('contour_interval',200)),
               'FIELD_NAME':'ELEV','CREATE_3D':False,'IGNORE_NODATA':False,'OFFSET':0,'OUTPUT':str(contour_path)})
-        contour=QgsVectorLayer(str(contour_path),'Contours','ogr')
+        contour=QgsVectorLayer(str(contour_path),f"等高线 · {float(config.get('contour_interval',200)):g} m",'ogr')
         if not contour.isValid():raise ValueError('QGIS 等高线生成失败。')
         contour.setRenderer(QgsSingleSymbolRenderer(QgsLineSymbol.createSimple({'line_color':'91,85,66,150','line_width':'.10'})))
-        labels(contour,'ELEV',6,True);project.addMapLayer(contour)
+        labels(contour,'ELEV',7,True);project.addMapLayer(contour)
         main_layers=[contour,shade,focus]
     layout=QgsPrintLayout(project);layout.initializeDefaults();layout.setName(config.get('title','Map'))
     layout.pageCollection().pages()[0].setPageSize(paper,QgsLayoutItemPage.Landscape if landscape else QgsLayoutItemPage.Portrait)
@@ -155,8 +163,17 @@ def execute(request):
     add_label(layout,'source',config.get('source_note',''),14*sx,194*sy,269*sx,12*sy,7,'#64757c')
     if config.get('legend',True):
         legend=QgsLayoutItemLegend(layout);legend.setId('legend');legend.setTitle(config.get('legend_title') or focus.name())
-        legend.setLinkedMap(main);legend.setAutoUpdateModel(False);legend.model().rootGroup().clear();legend.model().rootGroup().addLayer(focus)
-        QgsLegendRenderer.setNodeLegendStyle(legend.model().rootGroup().findLayer(focus.id()),QgsLegendStyle.Hidden)
+        legend.setLinkedMap(main);legend.setAutoUpdateModel(False);legend.model().rootGroup().clear()
+        for layer in main_layers:
+            if not layer.customProperty('gaia/legend_exempt_reason',''):legend.model().rootGroup().addLayer(layer)
+        if len(main_layers)==1:QgsLegendRenderer.setNodeLegendStyle(legend.model().rootGroup().findLayer(focus.id()),QgsLegendStyle.Hidden)
+        if config.get('template')=='terrain':
+            node=legend.model().rootGroup().findLayer(focus.id())
+            QgsLegendRenderer.setNodeLegendStyle(node,QgsLegendStyle.Hidden)
+            QgsMapLayerLegendUtils.setLegendNodeUserLabel(node,0,'海拔')
+            for i,entry in enumerate(legend.model().layerLegendNodes(node)):
+                if isinstance(entry,QgsColorRampLegendNode):QgsMapLayerLegendUtils.setLegendNodeSymbolSize(node,i,QSizeF(5,22))
+            legend.model().refreshLayerLegend(node)
         legend.setStyleFont(QgsLegendStyle.Title,font(10));legend.setStyleFont(QgsLegendStyle.SymbolLabel,font(8));legend.setStyleFont(QgsLegendStyle.Subgroup,font(8))
         layout.addLayoutItem(legend)
         if config.get('legend_position')=='outside-right':legend.attemptMove(QgsLayoutPoint(229*sx,47*sy))
@@ -172,7 +189,9 @@ def execute(request):
     if config.get('scale_bar',True):
         scale=QgsLayoutItemScaleBar(layout);scale.setId('scale_bar');scale.setStyle('Single Box');scale.setLinkedMap(main);scale.applyDefaultSize()
         scale.setUnits(Qgis.DistanceUnit.Kilometers);scale.setUnitLabel('km');scale.setNumberOfSegments(2);scale.setNumberOfSegmentsLeft(0);scale.setFont(font(7))
-        km=extent.width()/1000*.10;power=10**math.floor(math.log10(max(km,.001)));segment=max(x*power for x in [1,2,5] if x*power<=km)
+        measure=QgsDistanceArea();measure.setSourceCrs(crs,project.transformContext());measure.setEllipsoid('WGS84')
+        center=extent.center();ground_width=measure.measureLine(QgsPointXY(extent.xMinimum(),center.y()),QgsPointXY(extent.xMaximum(),center.y()))
+        km=max(ground_width/1000*.10,.000001);power=10**math.floor(math.log10(km));segment=max(x*power for x in [1,2,5] if x*power<=km)
         scale.setUnitsPerSegment(segment);layout.addLayoutItem(scale)
         px,py=position(config.get('scale_position','bottom-left'),25,10)
         scale.attemptMove(QgsLayoutPoint(main.pos().x()+main.sizeWithUnits().width()*px/100,main.pos().y()+main.sizeWithUnits().height()*py/100))
@@ -279,6 +298,8 @@ def execute(request):
             settings=QgsLayoutExporter.ImageExportSettings();settings.dpi=request.get('dpi',150);result=exporter.exportToImage(str(destination),settings)
         if result!=QgsLayoutExporter.Success:raise ValueError('QGIS 导出失败：'+str(result))
         answer['rendered_path']=str(destination)
+    from qgis_audit import capture
+    answer['audit']=capture(layout,items,exporter,out,request.get('dpi',150))
     scene=[]
     page=layout.pageCollection().pages()[0]
     page.setVisibility(False)

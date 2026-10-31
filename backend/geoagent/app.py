@@ -8,17 +8,19 @@ import fcntl
 import uuid
 from pathlib import Path
 from urllib.parse import urlparse
+from typing import Literal
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from pydantic import BaseModel, ConfigDict, Field
 from .store import Store, now
-from .harness import Registry, execute_run
+from .harness import Registry, execute_run, LayerOrderArgs
 from .provider import ProviderError, resolve_config, test_connection
 from . import demo, gis, formats, algorithms, cartography
 from .memory import Memory
 from .memory_tools import Acceptance, VerificationChecks
+from .spatial_contracts import SpatialContext,LayerSemantics
 
 ROOT=Path(__file__).resolve().parents[2]
 
@@ -45,6 +47,8 @@ class ChatRequest(BaseModel):
     acceptance: Acceptance | None=None
     verify_recipe_id: str | None=None
     verification_checks: VerificationChecks | None=None
+    analysis_context: SpatialContext | None=None
+    vision_enabled: bool=True
 
 class ResumeRequest(BaseModel):
     model_config=ConfigDict(extra='forbid')
@@ -75,6 +79,18 @@ class StyleRequest(BaseModel):
     labels: bool | None=None
     field: str | None=None
     color: str | None=Field(default=None,pattern=r'^#[0-9a-fA-F]{6}$')
+
+class PreflightRequest(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    algorithm_id:str
+    arguments:dict
+    context:SpatialContext=Field(default_factory=SpatialContext)
+
+class MapAuditRequest(BaseModel):
+    export_id:str | None=None
+
+class MapPolishRequest(BaseModel):
+    preset:Literal['publication','reference']='publication'
 
 
 def create_app(workspace=None):
@@ -113,7 +129,45 @@ def create_app(workspace=None):
 
     @app.get('/api/layers')
     def layers():
-        return store.layers()
+        return store.ordered_layers()
+
+    @app.patch('/api/layers/order')
+    def reorder_layers(body: LayerOrderArgs):
+        return store.reorder_layers(body.layer_ids)
+
+    @app.post('/api/analysis/preflight')
+    def analysis_preflight(body:PreflightRequest):
+        from .spatial_contracts import preflight
+        return preflight(store,body.algorithm_id,body.arguments,body.context.model_dump())
+
+    @app.patch('/api/layers/{layer_id}/semantics')
+    def layer_semantics(layer_id:str,body:LayerSemantics):
+        from .spatial_contracts import declare_semantics
+        return declare_semantics(store,layer_id,body.model_dump(mode='json'))
+
+    @app.post('/api/layout/audit')
+    def layout_audit(body:MapAuditRequest):
+        from .map_quality import inspect_map
+        return inspect_map(store,export_id=body.export_id)
+
+    @app.post('/api/layout/polish')
+    def layout_polish(body:MapPolishRequest):
+        from .map_quality import polish
+        return polish(store,body.preset)
+
+    @app.get('/api/map-reviews/{review_id}')
+    def map_review(review_id:str):return store.object('map_reviews',review_id)
+
+    @app.get('/api/map-reviews/{review_id}/preview')
+    def map_review_preview(review_id:str):
+        record=store.object('map_reviews',review_id);path=(store.root/record['preview_path']).resolve()
+        if not path.is_relative_to(store.root.resolve()) or not path.is_file():raise HTTPException(404)
+        return FileResponse(path,media_type='image/png')
+
+    @app.get('/api/runs/{run_id}/quality')
+    def run_quality(run_id:str):
+        record=store.run(run_id)
+        return JSONResponse(record.get('validation',{}),headers={'Content-Disposition':'attachment; filename="gaia-quality-report.json"'})
 
     @app.post('/api/demo')
     def load_demo():
@@ -194,7 +248,7 @@ def create_app(workspace=None):
         layout=cartography.Layout.model_validate(cartography.get_layout(store))
         plugin=PluginManager(store).choose('cartography',layout.plugin_id)
         if not hasattr(plugin,'scene'):raise ValueError('当前插件未提供可编辑布局场景。请选择支持该能力的插件。')
-        return plugin.scene(store,layout,[x for x in store.layers() if x['style'].get('visible',True)])
+        return plugin.scene(store,layout,[x for x in store.ordered_layers() if x['style'].get('visible',True)])
 
     @app.get('/api/layout-scenes/{scene_id}/{element_id}.png')
     def layout_element(scene_id: str,element_id: str):
@@ -383,6 +437,7 @@ def create_app(workspace=None):
         elif body.mode not in ('offline','algorithm','workflow','code'):raise ValueError('未知运行模式。')
         if body.verify_recipe_id and body.verification_checks is None:raise ValueError('配方验证需要明确验收条件。')
         data=body.model_dump(exclude={'api_key','base_url','model','protocol','reasoning_effort','message'},exclude_none=True)
+        if body.analysis_context:data['analysis_context']=body.analysis_context.model_dump(exclude_unset=True)
         run={**data,'id':uuid.uuid4().hex,'message_input':body.message,'created_at':now(),'message':'','output_layers':[],
              'model_config':{k:v for k,v in (config or {}).items() if k!='api_key'}}
         Memory(store).session(body.session_id,body.message)

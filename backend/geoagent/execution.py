@@ -68,6 +68,10 @@ def execute(registry,run_id,name,raw,cancel):
     signature=digest([name,raw]);previous=store.step(run_id,step_id)
     if previous and previous['signature']!=signature:raise ValueError('恢复时工具参数发生变化，请新建任务。')
     if previous and previous['status']=='completed' and previous.get('result',{}).get('success'):
+        from .spatial_contracts import semantic_metadata
+        declarations=previous['result'].get('data',{}).get('quality',{}).get('preflight',{}).get('declarations',{})
+        for id,old in declarations.items():
+            if semantic_metadata(store,id)!=old:raise ValueError('输入的空间语义声明在暂停后变化，请重新规划任务。')
         for id,expected in previous.get('input_hashes',{}).items():
             if Memory(store).fingerprint(id)[0]!=expected:raise ValueError('已完成步骤的输入发生变化，不能安全续跑。')
         # Check the exact published result rather than recreating it.
@@ -114,8 +118,8 @@ def execute(registry,run_id,name,raw,cancel):
         store.event(run_id,'tool_started',{'step_id':step_id,'name':name,'arguments':raw})
         store.event(run_id,'permission_checked',{'step_id':step_id,'tool':name,'decision':'allow','policy':'explicit approval' if reason else 'workspace scoped operation'})
         with scope(registry,step_id):data=tool.handler(args,run_id)
-        report=validate_result(store,name,data)
         for hook in registry.post_hooks:hook(tool,args,data,run_id)
+        report=validate_result(store,name,data)
         store.event(run_id,'validation_completed',{'step_id':step_id,'tool':name,'checks':report})
         result={'success':report['passed'],'data':data,'validation':report}
         if not report['passed']:result['error']='；'.join(report['errors'])
@@ -123,7 +127,9 @@ def execute(registry,run_id,name,raw,cancel):
         record['status']='waiting_approval';store.save_step(run_id,step_id,record)
         raise
     except InterruptedError:raise
-    except Exception as exc:result={'success':False,'error':str(exc),'retry':'检查图层、参数、数据版本和工具说明后再调用。'}
+    except Exception as exc:
+        result={'success':False,'error':str(exc),'retry':'检查图层、参数、数据版本和工具说明后再调用。'}
+        if hasattr(exc,'report'):result['quality']=exc.report
     if 'before' in locals():record['published_layers']=[x['id'] for x in store.layers() if x['id'] not in before]
     result['step_id']=step_id
     record.update(status='completed',result=result,finished_at=now())

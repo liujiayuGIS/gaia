@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 from pydantic import Field
 from . import formats,algorithms,cartography,workflows
+from .spatial_contracts import SpatialContext,contract
 
 
 def install(registry,Tool,Args):
@@ -13,6 +14,7 @@ def install(registry,Tool,Args):
         algorithm_id: str
     class RunAlgorithm(Algorithm):
         arguments: dict[str,Any]
+        context: SpatialContext | None=None
     class Asset(Args):
         asset_id: str
     class Import(Asset):
@@ -71,7 +73,7 @@ def install(registry,Tool,Args):
         features=store.data(a.layer_id)['features']
         return {'total':len(features),'features':features[:a.limit]}
     registry.register(Tool('search_algorithms','检索可用 GIS 算法目录；返回真实输入参数与输出契约。',Search,search))
-    registry.register(Tool('get_algorithm','读取算法的完整参数和适用条件。',Algorithm,lambda a,r:algorithms.get_spec(a.algorithm_id)))
+    registry.register(Tool('get_algorithm','读取算法的完整参数、空间语义前提和独立核验范围。',Algorithm,lambda a,r:{**algorithms.get_spec(a.algorithm_id),'spatial_contract':contract(a.algorithm_id)}))
     registry.register(Tool('run_algorithm','执行已注册算法。先检查输入；严格按 get_algorithm 参数传入。结果保存为新图层并附加血缘。',RunAlgorithm,lambda a,r:(__import__('geoagent.plugins',fromlist=['PluginManager']).PluginManager(store).execute(a.algorithm_id,a.arguments,r,registry._local.cancel) if ':' in a.algorithm_id else algorithms.run_algorithm(store,a.algorithm_id,a.arguments,r)),True))
     registry.register(Tool('list_imports','列出用户已上传到数据收件箱的资产与可导入子资源；不读取宿主机任意目录。',Args,lambda a,r:store.objects('assets')))
     registry.register(Tool('inspect_import','检查待导入数据的文件、驱动、坐标系和子图层。',Asset,lambda a,r:store.object('assets',a.asset_id)))

@@ -48,6 +48,34 @@ class Store:
         with self.db() as db:
             return [json.loads(r['metadata']) for r in db.execute('SELECT metadata FROM layers ORDER BY rowid')]
 
+    def ordered_layers(self):
+        """Display stack, top first. Keep layers() in creation order for run provenance."""
+        with self.lock:
+            layers = self.layers()
+            order = self.setting('layer_order')
+            if order is None:
+                # Preserve the former automatic stacking until the user arranges it.
+                def priority(layer):
+                    if layer.get('kind') == 'raster': return 0
+                    types = ' '.join(layer.get('geometry_types', []))
+                    return 3 if 'Point' in types else 2 if 'Line' in types else 1
+                return sorted(reversed(layers), key=priority, reverse=True)
+            by_id = {layer['id']: layer for layer in layers}
+            known = set(order)
+            return ([layer for layer in reversed(layers) if layer['id'] not in known]
+                    + [by_id[id] for id in order if id in by_id])
+
+    def reorder_layers(self, layer_ids):
+        with self.lock, self.db() as db:
+            ids = {row['id'] for row in db.execute('SELECT id FROM layers')}
+            if len(layer_ids) != len(set(layer_ids)):
+                raise ValueError('图层顺序不能包含重复 ID。')
+            if set(layer_ids) != ids:
+                raise ValueError('图层列表已变化，请刷新后重试；排序必须包含全部当前图层。')
+            db.execute('INSERT OR REPLACE INTO objects(kind,id,data) VALUES(?,?,?)',
+                       ('settings', 'layer_order', json.dumps(layer_ids)))
+        return self.ordered_layers()
+
     def get_layer(self, layer_id):
         with self.db() as db:
             row = db.execute('SELECT metadata FROM layers WHERE id=?', (layer_id,)).fetchone()

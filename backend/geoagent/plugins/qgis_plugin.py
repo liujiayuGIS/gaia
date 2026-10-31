@@ -85,7 +85,7 @@ class QGISPlugin(AnalysisPlugin):
                 shutil.copy2(source,target);item['picture_path']=str(target)
         selected={x['id']:x for x in layers}
         # Preserve the entire workspace in a project snapshot; map frames use explicit bindings.
-        all_layers=store.layers()
+        all_layers=store.ordered_layers()
         paths,metadata=runtime.copy_inputs(store,{x['id']:x['id'] for x in all_layers},job)
         scene=[]
         for layer in all_layers:
@@ -108,6 +108,7 @@ class QGISPlugin(AnalysisPlugin):
         job,request=self.prepare(store,config,layers,'render',fmt,dpi)
         response=runtime.execute(runtime.qgis_python(),'qgis_worker.py',request,job,timeout=180)
         content=Path(response['rendered_path']).read_bytes()
+        self.render_evidence=response.get('audit',{})
         if not preview:self.record_project(store,response,config.get('title','地图工程'),config)
         return content
 
@@ -131,7 +132,7 @@ class QGISPlugin(AnalysisPlugin):
     def save_project(self,store,name,layout=None):
         from ..cartography import get_layout
         config=layout or get_layout(store)
-        job,request=self.prepare(store,config,store.layers(),'project')
+        job,request=self.prepare(store,config,[x for x in store.ordered_layers() if x['style'].get('visible',True)],'project')
         response=runtime.execute(runtime.qgis_python(),'qgis_worker.py',request,job,timeout=180)
         return self.record_project(store,response,name,config)
 
@@ -154,10 +155,13 @@ class QGISPlugin(AnalysisPlugin):
         remap={}
         for old,new in zip(response.get('layer_metadata',[]),answer['layers']):
             remap[old['backend_id']]=new['layer_id']
+            store.style_layer(new['layer_id'],visible=old.get('visible',True))
             if old.get('style_path'):
                 target=store.root/'styles'/(new['layer_id']+'.qml');target.parent.mkdir(exist_ok=True)
                 shutil.copy2(old['style_path'],target)
                 store.patch_layer(new['layer_id'],{'qgis_style_path':str(target.relative_to(store.root))})
+        restored=list(remap.values())
+        store.reorder_layers(restored+[x['id'] for x in store.ordered_layers() if x['id'] not in restored])
         layout=record['layout'].copy();layout.pop('template_id',None)
         for key in ('focus_layer_id','context_layer_id'):
             if layout.get(key):layout[key]=remap.get(layout[key])
@@ -166,7 +170,7 @@ class QGISPlugin(AnalysisPlugin):
 
     def scene(self,store,layout,layers):
         config=layout.model_dump() if hasattr(layout,'model_dump') else layout
-        key=hashlib.sha256(json.dumps({'layout':config,'layers':store.layers(),'scene_version':2},sort_keys=True,ensure_ascii=False).encode()).hexdigest()
+        key=hashlib.sha256(json.dumps({'layout':config,'layers':store.ordered_layers(),'scene_version':5},sort_keys=True,ensure_ascii=False).encode()).hexdigest()
         try:return store.object('layout_scenes',key)['scene']
         except ValueError:pass
         job,request=self.prepare(store,config,layers,'project')

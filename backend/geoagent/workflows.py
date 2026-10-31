@@ -50,7 +50,7 @@ def execute(store,registry,workflow_id,run_id,cancel):
             inputs=PluginManager(store).input_ids(node['algorithm_id'],args)
         else:inputs=[value for key,value in args.items() if key.endswith('_id')]
         for value in inputs:registry.execute(run_id,'inspect_layer',{'layer_id':value},cancel)
-        result=registry.execute(run_id,'run_algorithm',{'algorithm_id':node['algorithm_id'],'arguments':args},cancel)
+        result=registry.execute(run_id,'run_algorithm',{'algorithm_id':node['algorithm_id'],'arguments':args,'context':node.get('context')},cancel)
         receipt['nodes'].append({'node_id':node['id'],'arguments':args,'result':result})
         if not result['success']:
             plan['steps'][index]['status']='blocked';store.put_object('settings','plan:'+run_id,plan)

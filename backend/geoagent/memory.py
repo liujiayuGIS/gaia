@@ -76,7 +76,7 @@ class Memory:
             except ValueError:content_hash,files='missing',{}
             modified=bool(old and old['content_hash']!=content_hash)
             if modified:changed.add(id)
-            summary={k:layer.get(k) for k in ('name','kind','crs','bounds','fields','count','geometry_types','provenance')}
+            summary={k:layer.get(k) for k in ('name','kind','crs','bounds','fields','count','geometry_types','provenance','semantics','quality')}
             # Refresh physical metadata when an external edit invalidates the snapshot.
             if modified and content_hash!='missing':
                 try:
