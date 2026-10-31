@@ -66,8 +66,8 @@ jobs:
           npm --prefix frontend run build
           npm --prefix desktop ci
           npm --prefix desktop test
-      - name: Bundle Python and QGIS
-        run: micromamba run -n gaia-desktop python scripts/package_desktop_runtime.py --prefix "$MAMBA_ROOT_PREFIX/envs/gaia-desktop" --skip-create
+      - name: Install application Python dependencies
+        run: micromamba run -n gaia-desktop python -m pip install -r desktop/requirements-app.txt
       - name: Native GIS and sandbox tests
         env:
           PYTHONPATH: backend
@@ -79,6 +79,8 @@ jobs:
           if [ "$RUNNER_OS" = Windows ]; then export GIS_QGIS_PYTHON="$MAMBA_ROOT_PREFIX/envs/gaia-desktop/python.exe"; fi
           export GIS_PYTHON="$GIS_QGIS_PYTHON"
           micromamba run -n gaia-desktop python -m pytest backend/tests/test_desktop.py -q --basetemp .desktop-build/native-tests
+      - name: Bundle Python and QGIS
+        run: micromamba run -n gaia-desktop python scripts/package_desktop_runtime.py --prefix "$MAMBA_ROOT_PREFIX/envs/gaia-desktop" --skip-create
       - name: First launch, private API, and restart persistence
         run: npm --prefix desktop run smoke
       - name: Create installer

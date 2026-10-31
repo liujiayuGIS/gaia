@@ -7,6 +7,8 @@ const {_electron:electron}=require('playwright');const path=require('node:path')
  const ready=page=>Promise.race([page.waitForURL('gaia://app/',{timeout:600000}),page.locator('#retry').waitFor({state:'visible',timeout:600000}).then(async()=>{throw new Error('Desktop startup: '+await page.locator('#status').innerText())})]);
  console.log('Desktop test data: '+userData);
  let app=await launch();
+ const watchdog=setTimeout(()=>{console.error('Desktop smoke exceeded 15 minutes');app.process().kill('SIGKILL')},900000);
+ watchdog.unref();
  try{
   let page=await app.firstWindow();page.setDefaultTimeout(600000);
   const errors=[];page.on('pageerror',e=>{errors.push(e.message);console.error(e.message)});
@@ -58,7 +60,7 @@ const {_electron:electron}=require('playwright');const path=require('node:path')
   const readyDir=path.join(userData,'sessions');
   const address=JSON.parse(fs.readFileSync(path.join(readyDir,fs.readdirSync(readyDir).filter(x=>x.endsWith('.json')).sort((a,b)=>fs.statSync(path.join(readyDir,b)).mtimeMs-fs.statSync(path.join(readyDir,a)).mtimeMs)[0]),'utf8'));
   assert.equal((await fetch('http://127.0.0.1:'+address.port+'/api/layers')).status,401);
-  await page.reload();await page.waitForSelector('.map-canvas[data-ready="true"]',{timeout:600000});
+  await page.reload();await page.waitForSelector('.map-canvas[data-ready="true"]',{timeout:120000});
   fs.mkdirSync(path.resolve(__dirname,'../../.desktop-build/qa'),{recursive:true});
   await page.screenshot({path:path.resolve(__dirname,'../../.desktop-build/qa/desktop-'+process.platform+'-'+process.arch+'.png')});
   fs.writeFileSync(path.resolve(__dirname,'../../.desktop-build/qa/smoke-user-data.txt'),userData);
@@ -73,5 +75,5 @@ const {_electron:electron}=require('playwright');const path=require('node:path')
   for(const file of ['desktop.log','desktop.log.previous']){const source=path.join(userData,'logs',file);if(fs.existsSync(source))fs.copyFileSync(source,path.join(qa,file))}
   const page=app.windows()[0];if(page)await page.screenshot({path:path.join(qa,'failure.png')}).catch(()=>{});
   throw error;
- }finally{await app.close()}
+ }finally{clearTimeout(watchdog);await app.close()}
 })().catch(error=>{console.error(error);process.exit(1)});

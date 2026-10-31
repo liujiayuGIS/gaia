@@ -85,6 +85,15 @@ def outputs_from_result(result,job,context):
 def run(request,app):
     import processing
     job=Path(request['job'])
+    if sys.platform=='win32' and request['operation'] in ('render','project','template'):
+        from qgis.PyQt.QtCore import QDir,QTemporaryFile,QTemporaryDir
+        probe=QTemporaryFile();opened=probe.open()
+        if not opened:
+            explicit=QTemporaryFile(str(job/'tmp/gaia-XXXXXX'));explicit_ok=explicit.open()
+            raise ValueError('Qt temporary file: '+json.dumps({'default_path':QDir.tempPath(),
+                'default_error':probe.errorString(),'explicit_ok':explicit_ok,
+                'explicit_error':explicit.errorString(),'TMP':os.environ.get('TMP'),'TEMP':os.environ.get('TEMP')}))
+        probe.close()
     if request['operation']=='catalog':
         return {'version':Qgis.QGIS_VERSION,'providers':[{'id':p.id(),'name':p.name()} for p in app.processingRegistry().providers()],
                 'algorithms':[definition(a) for a in app.processingRegistry().algorithms()]}
