@@ -4,13 +4,14 @@ const {_electron:electron}=require('playwright');const path=require('node:path')
  const userData=process.env.GAIA_SMOKE_DATA_DIR||fs.mkdtempSync(path.join(os.tmpdir(),'gaia-desktop-test-'));
  const launch=()=>electron.launch({...(process.env.GAIA_PACKAGED_EXECUTABLE?{executablePath:process.env.GAIA_PACKAGED_EXECUTABLE,args:[]}:{args:[path.resolve(__dirname,'..')]}),
   env:{...process.env,GAIA_DESKTOP_DATA_DIR:userData},timeout:600000});
+ const ready=page=>Promise.race([page.waitForURL('gaia://app/',{timeout:600000}),page.locator('#retry').waitFor({state:'visible',timeout:600000}).then(async()=>{throw new Error('Desktop startup: '+await page.locator('#status').innerText())})]);
  console.log('Desktop test data: '+userData);
  let app=await launch();
  try{
   let page=await app.firstWindow();page.setDefaultTimeout(600000);
   const errors=[];page.on('pageerror',e=>{errors.push(e.message);console.error(e.message)});
   page.on('console',e=>{if(e.type()==='error')console.error('Renderer: '+e.text())});
-  await page.waitForURL('gaia://app/');await page.getByRole('button',{name:'数据面板',exact:true}).waitFor();
+  await ready(page);await page.getByRole('button',{name:'数据面板',exact:true}).waitFor();
   assert.equal(await page.evaluate(()=>typeof require),'undefined');
   const result=await page.evaluate(async()=>{
    const get=async p=>(await fetch('/api'+p)).json();
@@ -46,14 +47,14 @@ const {_electron:electron}=require('playwright');const path=require('node:path')
 
   // Requests outside the private bridge cannot read the user's workspace.
   const readyDir=path.join(userData,'sessions');
-  const ready=JSON.parse(fs.readFileSync(path.join(readyDir,fs.readdirSync(readyDir).filter(x=>x.endsWith('.json')).sort((a,b)=>fs.statSync(path.join(readyDir,b)).mtimeMs-fs.statSync(path.join(readyDir,a)).mtimeMs)[0]),'utf8'));
-  assert.equal((await fetch('http://127.0.0.1:'+ready.port+'/api/layers')).status,401);
+  const address=JSON.parse(fs.readFileSync(path.join(readyDir,fs.readdirSync(readyDir).filter(x=>x.endsWith('.json')).sort((a,b)=>fs.statSync(path.join(readyDir,b)).mtimeMs-fs.statSync(path.join(readyDir,a)).mtimeMs)[0]),'utf8'));
+  assert.equal((await fetch('http://127.0.0.1:'+address.port+'/api/layers')).status,401);
   await page.reload();await page.waitForSelector('.map-canvas[data-ready="true"]',{timeout:600000});
   fs.mkdirSync(path.resolve(__dirname,'../../.desktop-build/qa'),{recursive:true});
   await page.screenshot({path:path.resolve(__dirname,'../../.desktop-build/qa/desktop-'+process.platform+'-'+process.arch+'.png')});
   fs.writeFileSync(path.resolve(__dirname,'../../.desktop-build/qa/smoke-user-data.txt'),userData);
   assert.deepEqual(errors,[]);
-  await app.close();app=await launch();page=await app.firstWindow();await page.waitForURL('gaia://app/',{timeout:600000});
+  await app.close();app=await launch();page=await app.firstWindow();await ready(page);
   assert.equal(await page.evaluate(()=>localStorage.getItem('desktop-persistence-test')),'retained');
   const count=await page.evaluate(async()=>(await (await fetch('/api/layers')).json()).length);
   assert.equal(count,result.count);
