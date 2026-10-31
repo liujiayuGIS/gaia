@@ -1,4 +1,4 @@
-# GAIA · v0.3.0
+# GAIA · v0.4.0
 
 **Geospatial Artificial Intelligence Assistant · 地理空间人工智能助手盖亚**
 
@@ -28,6 +28,9 @@ cd ..
 Linux 中文制图需要安装 Noto CJK 字体；macOS 自动使用 Arial Unicode。
 
 ## 可以验收什么
+
+- **持久 Harness**：LangGraph + SQLite 检查点、会话连续、工具回执复用、跨重启审批、恢复前输入/成果版本核对和统一验收。
+- **五层记忆与工具沉淀**：工作上下文、执行状态、资产目录、显式偏好、FTS5 方法知识；代码配方经过执行验证和人工审核后成为类型化工具。详见 [v0.4 架构与边界](docs/HARNESS_V04.md)。
 
 - **GAIA 工作区**：圆润的三栏数据/地图/常驻助手布局，独立聊天区、浅深主题、自定义强调色和地图背景。
 - **QGIS 原生插件**：本机真实注册 440 个 Processing 算法，原生布局、工程、样式与 QPT 模板保存；通过插件 SDK 继续扩展其他应用。
@@ -67,13 +70,13 @@ OpenAI 根地址为 `https://api.openai.com/v1`，协议选“自动”或“Res
 密钥只保存在当前页面内存；刷新后需重新填写。也可在启动前设置 `GIS_LLM_API_KEY`。密钥不写入浏览器存储、运行记录或 Git。
 模型接收任务、图层摘要、属性样本与工具结果；完整地理文件留在本地。“测试连接”会发起一次短请求，可能产生 API 用量，不读取地理文件。
 
-Responses 使用 `store: false` 和 `reasoning.encrypted_content`，在单次任务的工具循环中保留加密推理项；不展示或落盘隐藏思维链。界面展示任务计划、实际工具步骤、参数、结果和用量。
-当前不是逐 token 流式显示；不同聊天轮次使用历史任务与结果文本，重启不恢复推理状态。
+Responses 使用 `store: false` 和 `reasoning.encrypted_content`，工具循环与本地检查点保留供应商返回的不透明加密推理项，用于跨重启恢复；不展示隐藏思维文本。API Key 不进入检查点。界面展示计划、实际工具步骤、参数、验收和用量。
+当前不是逐 token 流式显示；同会话问答持续衔接，中断任务可从检查点继续。重启服务后需要重新提供 API Key，或使用服务端环境变量。
 真实供应商请求需要使用自己的有效凭据验收，模拟响应不能代替真实连通性。
 
 ## Harness 与实现
 
-React + MapLibre / FastAPI + GeoPandas + GDAL + Rasterio + Shapely + PyProj + Matplotlib。
+React + MapLibre / FastAPI + LangGraph + SQLite / GeoPandas + GDAL + Rasterio + Shapely + PyProj + Matplotlib。
 
 ```text
 自然语言任务 / 手动算法 / 工作流
@@ -86,7 +89,10 @@ SQLite 事件 / 输入哈希 / 方法参数 / 布局与下载成果
 ```
 
 - `provider.py`：Responses / 兼容协议、连接诊断、密钥脱敏。
-- `harness.py` / `studio_tools.py`：类型化工具、检查钩子、模型循环、计划与失败反馈。
+- `durable.py` / `execution.py`：LangGraph 持久循环、审批中断、工具回执与恢复。
+- `memory.py` / `memory_tools.py`：五层记忆的上下文装配、结构化资产、偏好与知识检索。
+- `validation.py` / `learned_tools.py`：统一验收与代码配方的验证、审核、推广。
+- `harness.py` / `studio_tools.py`：类型化工具、GIS 检查钩子、计划与离线命令。
 - `algorithms.py`：35 个算法与参数契约；表达式使用受限 AST，不执行任意 Python。
 - `formats.py`：GDAL 导入导出、收件箱、栅格预览、原生投影快照。
 - `workflows.py`：最多 12 节点的依赖检查、拓扑执行和重放凭据。
@@ -112,7 +118,7 @@ GEOAGENT_WORKSPACE=/tmp/gaia-qa PORT=8767 ./start.sh
 BASE_URL=http://127.0.0.1:8767 node scripts/gaia-ui-test.cjs
 ```
 
-可用 `PLAYWRIGHT_MODULE` 指定模块、`CHROME_PATH` 指定 Chrome。当前验收证据见 [v0.3 验证记录](docs/VERIFICATION_V03.md)；[verification.json](verification.json) 保留早期 v0.2 记录。GAIA 浏览器测试需要先导入真实矢量和 DEM，可用下载脚本和 `seed_native_demo.py` 准备隔离工作区。
+可用 `PLAYWRIGHT_MODULE` 指定模块、`CHROME_PATH` 指定 Chrome。v0.4 验收见 [Harness 验证记录](docs/VERIFICATION_V04.md)。此前界面与插件验收见 [v0.3 验证记录](docs/VERIFICATION_V03.md)；[verification.json](verification.json) 保留早期 v0.2 记录。GAIA 浏览器测试需要先导入真实矢量和 DEM，可用下载脚本和 `seed_native_demo.py` 准备隔离工作区。
 `sample-data/` 和界面示例均为合成数据，不代表真实站点、公园、行政区或地形。
 
 ## 下一阶段与限制

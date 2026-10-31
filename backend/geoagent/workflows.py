@@ -3,6 +3,7 @@ import re
 import uuid
 from .algorithms import get_spec,validate_args
 from .store import now
+from .memory import digest
 
 REF=re.compile(r'^\$([a-z][a-z0-9_]{0,31})\.layer_id$')
 
@@ -32,9 +33,13 @@ def save(store,name,nodes):
 
 
 def execute(store,registry,workflow_id,run_id,cancel):
-    workflow=store.object('workflows',workflow_id);nodes=validate(workflow['nodes']);outputs={};receipt={'id':uuid.uuid4().hex,'workflow_id':workflow_id,'run_id':run_id,'nodes':[],'created_at':now(),'status':'running'}
-    store.event(run_id,'plan_updated',{'steps':[{'title':get_spec(n['algorithm_id'])['name'],'status':'pending'} for n in nodes]})
-    for node in nodes:
+    workflow=store.object('workflows',workflow_id);nodes=validate(workflow['nodes']);outputs={};receipt={'id':digest([workflow_id,run_id])[:32],'workflow_id':workflow_id,'run_id':run_id,'nodes':[],'created_at':now(),'status':'running'}
+    plan={'steps':[{'title':get_spec(n['algorithm_id'])['name'],'status':'pending'} for n in nodes]}
+    store.put_object('settings','plan:'+run_id,plan)
+    store.event(run_id,'plan_updated',plan)
+    for index,node in enumerate(nodes):
+        plan['steps'][index]['status']='running'
+        store.put_object('settings','plan:'+run_id,plan)
         args={}
         for key,value in node['arguments'].items():
             match=REF.fullmatch(value) if isinstance(value,str) else None
@@ -48,9 +53,12 @@ def execute(store,registry,workflow_id,run_id,cancel):
         result=registry.execute(run_id,'run_algorithm',{'algorithm_id':node['algorithm_id'],'arguments':args},cancel)
         receipt['nodes'].append({'node_id':node['id'],'arguments':args,'result':result})
         if not result['success']:
+            plan['steps'][index]['status']='blocked';store.put_object('settings','plan:'+run_id,plan)
             receipt['status']='failed';store.put_object('workflow_runs',receipt['id'],receipt)
             raise ValueError(f"工作流节点 {node['id']} 失败：{result['error']}。已生成的图层保留。")
         outputs[node['id']]=result['data'];store.event(run_id,'workflow_node_completed',{'node_id':node['id'],'layer_id':result['data']['layer_id']})
         store.put_object('workflow_runs',receipt['id'],receipt)
+        plan['steps'][index]['status']='completed';store.put_object('settings','plan:'+run_id,plan)
+        store.event(run_id,'plan_updated',plan)
     receipt['status']='completed';store.put_object('workflow_runs',receipt['id'],receipt)
     return {'workflow_id':workflow_id,'receipt_id':receipt['id'],'outputs':outputs,'status':'completed'}

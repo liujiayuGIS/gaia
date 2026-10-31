@@ -10,3 +10,14 @@ button,.button{border-radius:8px;min-height:32px}input,select,textarea{border-ra
 @media(max-width:920px){.workbench[data-mobile=contents]:not([data-context=data]) .contents-pane{display:none}.workbench[data-mobile=assistant] .right-dock,.workbench[data-mobile=document] .right-dock{display:none}}
 .parameter-field>.check-row{flex-direction:row;justify-content:flex-start;align-items:center;gap:7px;text-align:left;margin:0;min-height:30px}.tool-parameters fieldset>label{display:flex;flex-direction:column;gap:5px;margin:0 0 14px;font-size:11px}.tool-parameters fieldset>label:last-of-type{margin-bottom:8px}
 .workbench[data-theme=dark]{--danger:#f2a096}
+
+/* Task continuity fits inside the existing GAIA assistant. */
+.session-controls{display:flex;gap:6px;padding:4px 14px 10px;align-items:center}
+.session-controls select{min-width:0;flex:1;border-radius:10px;padding:7px;background:var(--pane,#fff);color:inherit;border:1px solid var(--border,#dce4e3)}
+.approval-card{border:1px solid var(--border,#dce4e3);border-radius:14px;padding:12px;margin:12px 0;background:var(--pane,#fff)}
+.approval-card p{font-size:12px;line-height:1.6}.approval-card pre{max-height:220px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px}
+.resume-task{margin:10px 0}.memory-panel details{padding:12px 0;border-bottom:1px solid var(--border,#dce4e3)}
+.memory-panel summary{cursor:pointer;font-weight:600;margin-bottom:10px}.memory-panel textarea{min-height:80px}
+.memory-item{display:grid;gap:5px;padding:10px 0;font-size:12px;overflow-wrap:anywhere}.memory-item small{opacity:.7}
+.memory-item p{white-space:pre-wrap;max-height:160px;overflow:auto}.memory-search{display:flex;gap:8px;margin:14px 0}.memory-search input{min-width:0;flex:1}
+.recipe-code{font-size:11px;line-height:1.5;max-height:260px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}

@@ -4,6 +4,7 @@ import io
 import json
 import os
 import threading
+import fcntl
 import uuid
 from pathlib import Path
 from urllib.parse import urlparse
@@ -16,6 +17,8 @@ from .store import Store, now
 from .harness import Registry, execute_run
 from .provider import ProviderError, resolve_config, test_connection
 from . import demo, gis, formats, algorithms, cartography
+from .memory import Memory
+from .memory_tools import Acceptance, VerificationChecks
 
 ROOT=Path(__file__).resolve().parents[2]
 
@@ -39,6 +42,24 @@ class ChatRequest(BaseModel):
     output_name: str | None=Field(default=None,max_length=100)
     workflow_id: str | None=None
     arguments: dict=Field(default_factory=dict)
+    acceptance: Acceptance | None=None
+    verify_recipe_id: str | None=None
+    verification_checks: VerificationChecks | None=None
+
+class ResumeRequest(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    api_key: str=Field(default='',repr=False,max_length=1000)
+    approval_id: str | None=None
+    approved: bool | None=None
+
+class KnowledgeRequest(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    title:str=Field(min_length=1,max_length=200)
+    body:str=Field(min_length=1,max_length=60000)
+    source:str=Field(default='',max_length=1000)
+    layer_ids:list[str]=Field(default_factory=list,max_length=20)
+    kind:str=Field(default='note',max_length=50)
+    reviewed:bool=False
 
 class ConnectionRequest(BaseModel):
     model_config=ConfigDict(extra='forbid')
@@ -57,12 +78,13 @@ class StyleRequest(BaseModel):
 
 
 def create_app(workspace=None):
-    app=FastAPI(title='GeoAgent Local',version='0.3.0')
+    app=FastAPI(title='GAIA Local',version='0.4.0')
     app.add_middleware(TrustedHostMiddleware,allowed_hosts=['127.0.0.1','localhost','testserver','[::1]'])
     store=Store(workspace or os.environ.get('GEOAGENT_WORKSPACE',ROOT/'.geoagent'))
     registry=Registry(store)
     app.state.store=store
     active={}
+    credentials={}
     gate=threading.Lock()
 
     @app.middleware('http')
@@ -79,7 +101,7 @@ def create_app(workspace=None):
 
     @app.get('/api/health')
     def health():
-        return {'ok':True,'version':'0.3.0','model_configured':bool(os.environ.get('GIS_LLM_API_KEY')),'tools':list(registry.tools),'limits':{'upload_mb':250,'features':100000,'raster_analysis_pixels':16000000}}
+        return {'ok':True,'version':'0.4.0','engine':'langgraph-sqlite','model_configured':bool(os.environ.get('GIS_LLM_API_KEY')),'tools':list(registry.tools),'limits':{'upload_mb':250,'features':100000,'raster_analysis_pixels':16000000}}
 
     @app.post('/api/model/test')
     def model_test(body: ConnectionRequest):
@@ -281,49 +303,126 @@ def create_app(workspace=None):
             raise ValueError('支持 geojson 或 csv 导出。')
         return Response(json.dumps(data,ensure_ascii=False),media_type='application/geo+json',headers={'Content-Disposition':f'attachment; filename="{layer_id}.geojson"'})
 
-    @app.get('/api/runs')
-    def runs():
-        return store.runs()
+    @app.get('/api/sessions')
+    def sessions():
+        # Migrate visible legacy conversations without mixing their histories.
+        for run in reversed(store.runs(limit=1000)):
+            if run.get('session_id') and not any(x['id']==run['session_id'] for x in store.objects('sessions')):
+                Memory(store).session(run['session_id'],run['message_input'])
+        return store.objects('sessions')
 
-    @app.post('/api/runs',status_code=202)
-    def chat(body: ChatRequest):
-        config=None
-        if body.mode=='model':
-            config=resolve_config(body.base_url,body.model,body.api_key,body.protocol,body.reasoning_effort)
-        elif body.mode not in ('offline','algorithm','workflow','code'):
-            raise ValueError('未知运行模式。')
-        # One workspace mutation owner. Parallel clients cannot race on the workspace.
+    @app.post('/api/sessions')
+    def new_session():
+        return Memory(store).session(uuid.uuid4().hex)
+
+    @app.get('/api/memory')
+    def memory():
+        service=Memory(store)
+        return {'preferences':service.preferences(),'catalog':service.catalog(),
+                'knowledge':[{k:v for k,v in x.items() if k!='body'} for x in store.objects('knowledge')]}
+
+    @app.patch('/api/memory/preferences')
+    def preferences(body:dict):
+        return Memory(store).set_preferences(body)
+
+    @app.delete('/api/memory/preferences')
+    def forget_preferences():
+        store.delete_object('settings','user_preferences');return {'forgotten':True}
+
+    @app.post('/api/memory/knowledge')
+    def add_knowledge(body:KnowledgeRequest):
+        return Memory(store).add_knowledge(**body.model_dump())
+
+    @app.get('/api/memory/knowledge')
+    def search_knowledge(query:str=''):
+        return Memory(store).search(query)
+
+    @app.delete('/api/memory/knowledge/{knowledge_id}')
+    def forget_knowledge(knowledge_id:str):
+        Memory(store).forget_knowledge(knowledge_id);return {'forgotten':True}
+
+    @app.post('/api/recipes/{recipe_id}/promote')
+    def promote_recipe(recipe_id:str,body:dict):
+        from .learned_tools import promote
+        if active:raise HTTPException(409,'请等待当前任务完成后推广工具。')
+        return promote(store,recipe_id,body.get('reviewed') is True)
+
+    @app.get('/api/runs')
+    def runs(session_id:str | None=None):
+        return store.runs(session_id)
+
+    def launch(run,config,resume=False,decision=None):
         with gate:
-            if active:
-                raise HTTPException(409,'工作区已有运行中的任务，请等待或停止。')
-            run={'id':uuid.uuid4().hex,'status':'queued','mode':body.mode,'session_id':body.session_id,
-                 'message_input':body.message,'selected_layers':body.selected_layers,'algorithm_id':body.algorithm_id,'workflow_id':body.workflow_id,'arguments':body.arguments,'code':body.code,'plugin_id':body.plugin_id,'inputs':body.inputs,'save_as':body.save_as,'recipe_id':body.recipe_id,'output_name':body.output_name,'created_at':now(),'message':'','output_layers':[]}
-            store.save_run(run)
-            cancel=threading.Event()
-            active[run['id']]=cancel
+            if active:raise HTTPException(409,'工作区已有运行中的任务，请等待或停止。')
+            lease=(store.root/'execution.lock').open('a')
+            try:fcntl.flock(lease,fcntl.LOCK_EX|fcntl.LOCK_NB)
+            except BlockingIOError:
+                lease.close();raise HTTPException(409,'另一个服务进程正在执行此工作区的任务。')
+            if config:credentials[run['id']]=config['api_key']
+            run.update(status='queued',resumable=True,owner_pid=os.getpid())
+            store.save_run(run);cancel=threading.Event();active[run['id']]=cancel
         def work():
             try:
-                execute_run(store,registry,run,config,cancel)
+                execute_run(store,Registry(store),run,config,cancel,resume,decision)
+            except Exception as exc:
+                run.update(status='failed',message=str(exc),resumable=bool(run.get('checkpoint_version')))
+                store.save_run(run);store.event(run['id'],'run_error',{'error_type':type(exc).__name__,'message':str(exc)})
             finally:
+                fcntl.flock(lease,fcntl.LOCK_UN);lease.close()
                 with gate:
                     active.pop(run['id'],None)
+                    if store.run(run['id'])['status'] in ('completed','needs_attention'):
+                        credentials.pop(run['id'],None)
         threading.Thread(target=work,daemon=True).start()
         return {'id':run['id']}
 
+    @app.post('/api/runs',status_code=202)
+    def chat(body:ChatRequest):
+        config=None
+        if body.mode=='model':config=resolve_config(body.base_url,body.model,body.api_key,body.protocol,body.reasoning_effort)
+        elif body.mode not in ('offline','algorithm','workflow','code'):raise ValueError('未知运行模式。')
+        if body.verify_recipe_id and body.verification_checks is None:raise ValueError('配方验证需要明确验收条件。')
+        data=body.model_dump(exclude={'api_key','base_url','model','protocol','reasoning_effort','message'},exclude_none=True)
+        run={**data,'id':uuid.uuid4().hex,'message_input':body.message,'created_at':now(),'message':'','output_layers':[],
+             'model_config':{k:v for k,v in (config or {}).items() if k!='api_key'}}
+        Memory(store).session(body.session_id,body.message)
+        return launch(run,config)
+
     @app.get('/api/runs/{run_id}')
-    def get_run(run_id: str):
-        try:
-            return {**store.run(run_id),'events':store.events(run_id)}
-        except KeyError:
-            raise HTTPException(404,'运行不存在。')
+    def get_run(run_id:str):
+        try:return {**store.run(run_id),'events':store.events(run_id),'steps':store.steps(run_id)}
+        except KeyError:raise HTTPException(404,'运行不存在。')
+
+    @app.post('/api/runs/{run_id}/resume',status_code=202)
+    def resume_run(run_id:str,body:ResumeRequest):
+        try:run=store.run(run_id)
+        except KeyError:raise HTTPException(404,'运行不存在。')
+        if run['status'] not in ('failed','interrupted','cancelled','waiting_approval'):
+            raise HTTPException(409,'当前任务不可恢复。')
+        if run.get('checkpoint_version')!=1:raise ValueError('旧版任务没有检查点，请新建任务。')
+        decision=None
+        if run['status']=='waiting_approval':
+            pending=run.get('pending_approval',{})
+            if body.approval_id!=pending.get('id') or body.approved is None:raise ValueError('请提交当前操作的明确审批决定。')
+            decision={'approval_id':body.approval_id,'approved':body.approved}
+        elif body.approval_id is not None:raise ValueError('当前任务没有待审批操作。')
+        config=None
+        if run['mode']=='model':
+            saved=run['model_config'];key=body.api_key or credentials.get(run_id,'')
+            config=resolve_config(saved['base_url'],saved['model'],key,saved['protocol'],saved['reasoning_effort'])
+        return launch(run,config,True,decision)
 
     @app.post('/api/runs/{run_id}/cancel')
-    def cancel_run(run_id: str):
+    def cancel_run(run_id:str):
         with gate:
             cancel=active.get(run_id)
-            if cancel:
-                cancel.set()
-        return {'requested':bool(cancel),'note':'在工具或模型调用结束后停止；不会回滚已完成的图层。'}
+            if cancel:cancel.set()
+            else:
+                try:run=store.run(run_id)
+                except KeyError:raise HTTPException(404,'运行不存在。')
+                if run['status']=='waiting_approval':
+                    run.update(status='cancelled',message='审批等待已取消，成果保留。',resumable=False);store.save_run(run)
+        return {'requested':bool(cancel),'note':'停止执行并保留检查点；已完成图层不会回滚。'}
 
     @app.get('/api/runs/{run_id}/export')
     def export_run(run_id: str):

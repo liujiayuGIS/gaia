@@ -24,11 +24,19 @@ class Store:
             CREATE TABLE IF NOT EXISTS layers(id TEXT PRIMARY KEY, metadata TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS runs(id TEXT PRIMARY KEY, data TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS events(run_id TEXT, seq INTEGER, data TEXT, PRIMARY KEY(run_id,seq));
+            CREATE TABLE IF NOT EXISTS objects(kind TEXT,id TEXT,data TEXT,PRIMARY KEY(kind,id));
+            CREATE TABLE IF NOT EXISTS tool_steps(run_id TEXT,step_id TEXT,data TEXT,PRIMARY KEY(run_id,step_id));
             ''')
             for row in db.execute('SELECT id,data FROM runs').fetchall():
                 run = json.loads(row['data'])
                 if run['status'] in ('queued', 'running'):
-                    run.update(status='interrupted', finished_at=now(), message='服务重新启动；任务已中断。请重新提交，不会自动重复执行。')
+                    if run.get('owner_pid'):
+                        try:
+                            os.kill(run['owner_pid'],0)
+                            continue
+                        except ProcessLookupError:pass
+                        except PermissionError:continue
+                    run.update(status='interrupted', message='服务已重启。可从检查点继续；已完成步骤不会重复执行。')
                     db.execute('UPDATE runs SET data=? WHERE id=?', (json.dumps(run, ensure_ascii=False), run['id']))
 
     def db(self):
@@ -92,9 +100,31 @@ class Store:
             raise KeyError(run_id)
         return json.loads(row['data'])
 
-    def runs(self):
+    def runs(self, session_id=None, limit=50):
         with self.db() as db:
-            return [json.loads(r['data']) for r in db.execute('SELECT data FROM runs ORDER BY rowid DESC LIMIT 50')]
+            if session_id is None:
+                rows=db.execute('SELECT data FROM runs ORDER BY rowid DESC LIMIT ?', (limit,))
+            else:
+                rows=db.execute("SELECT data FROM runs WHERE json_extract(data,'$.session_id')=? ORDER BY rowid DESC LIMIT ?", (session_id,limit))
+            return [json.loads(r['data']) for r in rows]
+
+    def step(self, run_id, step_id):
+        with self.db() as db:
+            row=db.execute('SELECT data FROM tool_steps WHERE run_id=? AND step_id=?',(run_id,step_id)).fetchone()
+        return json.loads(row['data']) if row else None
+
+    def save_step(self, run_id, step_id, data):
+        with self.lock, self.db() as db:
+            db.execute('INSERT OR REPLACE INTO tool_steps VALUES(?,?,?)',(run_id,step_id,json.dumps(data,ensure_ascii=False,allow_nan=False)))
+        return data
+
+    def steps(self, run_id):
+        with self.db() as db:
+            return [json.loads(r['data']) for r in db.execute('SELECT data FROM tool_steps WHERE run_id=? ORDER BY rowid',(run_id,))]
+
+    def delete_object(self, kind, object_id):
+        with self.lock, self.db() as db:
+            db.execute('DELETE FROM objects WHERE kind=? AND id=?',(kind,object_id))
 
     def event(self, run_id, kind, data):
         with self.lock, self.db() as db:

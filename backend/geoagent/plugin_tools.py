@@ -37,7 +37,7 @@ def install(registry,Tool,Args):
         if a.save_as:
             id=uuid.uuid4().hex
             recipe={'id':id,'name':a.save_as,'plugin_id':a.plugin_id,'code':a.code,'code_sha256':code_hash,
-                    'inputs':a.inputs,'timeout':a.timeout,'created_at':now()}
+                    'inputs':a.inputs,'timeout':a.timeout,'created_at':now(),'status':'draft','version':0}
             store.put_object('recipes',id,recipe);result['recipe_id']=id
         return result
     def run_recipe(a,r):

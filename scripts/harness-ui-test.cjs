@@ -1,0 +1,53 @@
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const fs=require('fs');const base=process.env.BASE_URL||'http://127.0.0.1:8767';
+(async()=>{
+ const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH,args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+ try{
+  const page=await browser.newPage({viewport:{width:1600,height:1000}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto(base);await page.getByRole('heading',{name:'GAIA 助手',exact:true}).waitFor();
+  const first=await page.evaluate(()=>localStorage.getItem('gaia-session'));
+  const composer=page.locator('.assistant-dock textarea[aria-label="自然语言任务"]');
+  await composer.fill('列出图层');await page.locator('.assistant-dock').getByRole('button',{name:'发送任务',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('.assistant-dock .message-footer')?.textContent.includes('运行已结束'));
+  await page.reload();await page.getByRole('heading',{name:'GAIA 助手',exact:true}).waitFor();
+  if(await page.evaluate(()=>localStorage.getItem('gaia-session'))!==first)throw Error('Session changed on reload');
+  await page.locator('.assistant-dock .user-message').filter({hasText:'列出图层'}).waitFor();
+  await page.getByRole('button',{name:'新建会话',exact:true}).click();
+  await page.waitForFunction(old=>localStorage.getItem('gaia-session')!==old,first);
+  if(await page.locator('.assistant-dock .user-message').count())throw Error('New session leaked history');
+  await page.getByLabel('助手会话').selectOption(first);
+  await page.locator('.assistant-dock .user-message').filter({hasText:'列出图层'}).waitFor();
+  await page.getByRole('button',{name:'项目与记忆',exact:true}).click();
+  await page.getByLabel('常用坐标系').fill('EPSG:4547');await page.getByLabel('距离单位').selectOption('km');
+  await page.getByRole('button',{name:'保存偏好',exact:true}).click();
+  await page.getByLabel('标题',{exact:true}).fill('测试制图规范');await page.getByLabel('方法、SOP 或参考内容').fill('地图比例尺采用公里，保留数据来源。');
+  await page.getByRole('button',{name:'保存知识',exact:true}).click();await page.getByRole('button',{name:'忘记这条知识'}).last().waitFor();
+  await page.keyboard.press('Escape');
+  await page.locator('.assistant-dock').getByRole('button',{name:'模型设置',exact:true}).click();
+  await page.getByRole('button',{name:/连接模型/}).click();await page.getByLabel('模型名称').fill('qa');await page.getByLabel('API Key',{exact:true}).fill('QA_NOT_REAL');
+  await page.getByRole('button',{name:'应用设置',exact:true}).click();
+  await composer.fill('请生成测试分析结果');await page.locator('.assistant-dock').getByRole('button',{name:'发送任务',exact:true}).click();
+  await page.getByRole('button',{name:'允许本次操作',exact:true}).waitFor({timeout:30000});
+  await page.reload();await page.getByRole('button',{name:'允许本次操作',exact:true}).waitFor({timeout:30000});
+  const countBefore=(await (await page.request.get(base+'/api/layers')).json()).length;
+  await page.getByRole('button',{name:'允许本次操作',exact:true}).click();
+  await page.waitForFunction(()=>!document.querySelector('.approval-card'),{timeout:30000});
+  await page.waitForFunction(()=>document.querySelector('.assistant-dock .conversation:last-child .message-footer')?.textContent.includes('运行已结束'),{timeout:60000});
+  const countAfter=(await (await page.request.get(base+'/api/layers')).json()).length;
+  if(countAfter!==countBefore+1)throw Error('Approval did not publish exactly one layer');
+  const prefs=await (await page.request.get(base+'/api/memory')).json();if(prefs.preferences.crs!=='EPSG:4547'||prefs.preferences.distance_unit!=='km')throw Error('Preferences not saved');
+  const recipe=(await (await page.request.get(base+'/api/recipes')).json())[0];
+  let response=await page.request.post(base+'/api/runs',{data:{message:'验证配方',session_id:first,mode:'code',verify_recipe_id:recipe.id,verification_checks:{layer:{min_count:1},metrics:{count:{min:1,max:1000}}}}});
+  const id=(await response.json()).id;
+  for(let i=0;i<100;i++){const r=await(await page.request.get(base+'/api/runs/'+id)).json();if(!['queued','running'].includes(r.status)){if(r.status!=='completed')throw Error(r.message);break}await page.waitForTimeout(200)}
+  response=await page.request.post(base+'/api/recipes/'+recipe.id+'/promote',{data:{reviewed:true}});if(!response.ok())throw Error(await response.text());
+  await page.reload();await page.getByRole('heading',{name:'GAIA 助手',exact:true}).waitFor();
+  await page.waitForSelector('.map-canvas[data-ready="true"]',{timeout:60000});await page.waitForTimeout(500);
+  fs.mkdirSync('outputs/harness-v04',{recursive:true});await page.screenshot({path:'outputs/harness-v04/workspace.png',fullPage:true});
+  await page.setViewportSize({width:390,height:844});await page.getByRole('button',{name:'GAIA 助手',exact:true}).click();
+  if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+2))throw Error('Mobile overflow');
+  if(errors.length)throw Error(errors.join('\n'));
+  fs.writeFileSync('outputs/harness-v04/browser.json',JSON.stringify({checks:['session-reload','session-isolation','preferences','knowledge','approval-after-reload','real-python-publication','recipe-verification-promotion','mobile-no-overflow'],errors},null,2));
+  console.log('Harness browser checks passed');
+ }finally{await browser.close()}
+})().catch(e=>{console.error(e);process.exit(1)});

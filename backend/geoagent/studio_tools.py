@@ -60,6 +60,7 @@ def install(registry,Tool,Args):
         return store.put_object('exports',export_id,{'id':export_id,'name':meta['name']+path.suffix,'path':relative,'url':f'/api/exports/{export_id}/download','run_id':r,'created_at':now()})
     def plan(a,r):
         steps=[{'title':x,'status':'pending'} for x in a.steps]
+        store.put_object('settings','plan:'+r,{'steps':steps})
         store.event(r,'plan_updated',{'steps':steps})
         return {'steps':steps}
     def map_view(a,r):
