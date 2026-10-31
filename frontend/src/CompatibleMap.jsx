@@ -64,7 +64,7 @@ export default function CompatibleMap({layers,selected,onSelect,fitRef,basemap,b
    }
    if(first.current&&layers.length){first.current=false;const focus=layers.find(l=>l.id===selected)||layers.find(l=>l.kind==='raster')||layers.at(-1);fitRef.current?.(focus.bounds)}
    await Promise.all(images);
-   requestAnimationFrame(()=>{if(!controller.signal.aborted&&node.current)node.current.dataset.ready='true'});
+   requestAnimationFrame(()=>{if(!controller.signal.aborted&&node.current)node.current.dataset.ready=layers.length?'true':'false'});
   }
   draw().catch(e=>{if(e.name!=='AbortError')callbacks.current.onError?.(e.message)});
   return()=>controller.abort();
