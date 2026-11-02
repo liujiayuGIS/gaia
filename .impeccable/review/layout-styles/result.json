@@ -1,0 +1,45 @@
+{
+  "passed": true,
+  "defaultFont": "PingFang SC",
+  "titleFont": "Songti SC",
+  "checks": [
+    "real-public-data",
+    "four-north-presets",
+    "eight-native-scale-styles-catalog",
+    "manual-to-native-scene",
+    "km-to-m-ground-distance-preserved",
+    "actual-installed-fonts",
+    "font-weight-and-size",
+    "terrain-ramp-change",
+    "assistant-to-manual-style-sync",
+    "real-PDF-download",
+    "UI-font-preference-persistence",
+    "dark-style-panel",
+    "mobile-style-panel"
+  ],
+  "errors": [],
+  "backendRegression": {
+    "passed": 132,
+    "skipped": 8
+  },
+  "nativeStyleSuite": {
+    "passed": 17,
+    "includes": [
+      "installed-fonts",
+      "scale-ground-distance",
+      "QGZ-roundtrip",
+      "every-advertised-scale-renderer"
+    ]
+  },
+  "sourceSha256": {
+    "backend/geoagent/cartography.py": "183c9b5e75e914ab3164a136621cf2ce1d98e2952066478f49b4209067e67477",
+    "backend/geoagent/layout_language.py": "d54aa7d4f8d0fd6a6e3b4bb36bfe79c79a280df01271efa597de5f3be2a20ecd",
+    "backend/geoagent/plugins/qgis_cartography.py": "b7ad87139b5a46606b834072f49ec12715b7f50f7dcaa0b0bfe5d870f904bee6",
+    "backend/geoagent/plugins/cartography_styles.py": "ebbd027ad7c2fcb728e1d8bcee1685512b48189b1fe66131e804a1021fcc87a6",
+    "frontend/src/CartographyStyles.jsx": "b52fedac2715c2fdfcfe591ed25a87e226a72fab6dd83513c97fe064e285bb6a",
+    "frontend/src/atlas.css": "e0586ff44048c686dcc5e98c8f87f0f2f2777008ff738fb864c2db9d858ab010",
+    "frontend/src/ProWorkbench.jsx": "49290acf385cc6f8a1fc974e405e43617da9b35b944946e3cc7668a631dc8fa5"
+  },
+  "externalPaidModelCall": false,
+  "updatedAt": "2026-11-02T05:20:07.330794+00:00"
+}

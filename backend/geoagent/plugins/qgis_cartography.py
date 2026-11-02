@@ -8,15 +8,76 @@ from qgis.core import *
 from qgis.PyQt.QtCore import Qt, QRectF, QSize, QSizeF
 from qgis.PyQt.QtGui import QColor, QFont, QFontDatabase, QPainter
 from qgis.PyQt.QtXml import QDomDocument
+from cartography_styles import catalog,PREFERRED_FONTS,FONT_LABELS,TERRAIN_PALETTES,north_svg
 
-FONT='Microsoft YaHei' if __import__('sys').platform=='win32' else 'Arial Unicode MS'
+FONT='auto'
+STYLE_CONFIG={}
+_FONT_OPTIONS=None
 INK='#293941'
 COLORS=['#edf3db','#c5d9ce','#8db3a4','#527e73','#265047']
 TERRAIN=['#536d50','#829e69','#bacb92','#e3d5a3','#c1a781','#aa8978','#d3c6bb','#f8f6f0']
 
 
-def font(size):
-    value=QFont(FONT);value.setPointSizeF(float(size));return value
+def font_catalog():
+    global _FONT_OPTIONS
+    if _FONT_OPTIONS is not None:return _FONT_OPTIONS
+    database=QFontDatabase()
+    for path in ['/System/Library/Fonts/Supplemental/Arial Unicode.ttf']:
+        if Path(path).exists():QFontDatabase.addApplicationFont(path)
+    families=set(database.families())
+    preferred=[x for x in PREFERRED_FONTS if x in families]
+    featured=preferred+[x for x in FONT_LABELS if x in families and x not in preferred]
+    answer=catalog()
+    actual=set(QgsApplication.scaleBarRendererRegistry().renderers())
+    answer['scale_styles']=[x for x in answer['scale_styles'] if x['id'] in actual]
+    answer.update(default_font=preferred[0] if preferred else QFont().family(),
+        fonts=[{'family':x,'label':FONT_LABELS.get(x,x),'recommended':x in featured} for x in featured+sorted(families-set(featured))])
+    _FONT_OPTIONS=answer
+    return answer
+
+
+def font(size,family=None,weight=400,italic=False):
+    selected=family or STYLE_CONFIG.get('font_family','auto')
+    if selected=='auto':selected=font_catalog()['default_font']
+    if selected not in QFontDatabase().families():raise ValueError('字体未安装：'+selected)
+    value=QFont(selected);value.setPointSizeF(float(size))
+    weights=getattr(QFont,'Weight',QFont)
+    value.setWeight(getattr(weights,{400:'Normal',500:'Medium',600:'DemiBold',700:'Bold'}[int(weight)]))
+    value.setItalic(bool(italic));return value
+
+
+def apply_scale_style(item,spec):
+    style=spec.get('scale_style',STYLE_CONFIG.get('scale_style','Single Box'))
+    if style not in QgsApplication.scaleBarRendererRegistry().renderers():raise ValueError('本机 QGIS 不支持该比例尺样式：'+style)
+    item.setStyle(style)
+    if item.style()!=style:raise ValueError('QGIS 未能应用比例尺样式：'+style)
+    units=spec.get('scale_units',STYLE_CONFIG.get('scale_units','km'))
+    meters=item.unitsPerSegment()*(1000 if item.units()==Qgis.DistanceUnit.Kilometers else 1)
+    item.setUnits(Qgis.DistanceUnit.Kilometers if units=='km' else Qgis.DistanceUnit.Meters)
+    item.setUnitLabel(units);item.setUnitsPerSegment(meters/(1000 if units=='km' else 1))
+    item.setNumberOfSegments(int(spec.get('scale_segments',STYLE_CONFIG.get('scale_segments',2))))
+    item.setFont(font(spec.get('font_size',7),spec.get('font_family'),spec.get('font_weight',400)))
+    numeric=QgsBasicNumericFormat();numeric.setShowThousandsSeparator(False);numeric.setNumberDecimalPlaces(2);numeric.setShowTrailingZeros(False)
+    item.setNumericFormat(numeric)
+    if 'color' in spec:
+        item.setFontColor(QColor(spec['color']))
+        item.setLineSymbol(QgsLineSymbol.createSimple({'line_color':spec['color'],'line_width':'.25'}))
+        item.setFillSymbol(QgsFillSymbol.createSimple({'color':spec['color'],'outline_style':'no'}))
+
+
+def apply_legend_style(item,spec):
+    size=spec.get('font_size',8)
+    for component,points in [(QgsLegendStyle.Title,size+2),(QgsLegendStyle.SymbolLabel,size),(QgsLegendStyle.Subgroup,size)]:
+        item.setStyleFont(component,font(points,spec.get('font_family'),spec.get('font_weight',400)))
+    item.setColumnCount(int(spec.get('legend_columns',1)))
+    if 'color' in spec:item.setFontColor(QColor(spec['color']))
+
+
+def apply_north_style(item,spec,folder,main):
+    style=spec.get('north_style',STYLE_CONFIG.get('north_style','arrow'))
+    color=spec.get('north_color',spec.get('color',STYLE_CONFIG.get('north_color','#263b43')))
+    svg=folder/(item.id()+'-north.svg');svg.write_text(north_svg(style,color))
+    item.setPicturePath(str(svg));item.setLinkedMap(main);item.setNorthMode(QgsLayoutItemPicture.TrueNorth)
 
 
 def labels(layer,key,size=8,line=False):
@@ -61,9 +122,12 @@ def raster_style(layer,meta):
     if not math.isfinite(lo) or not math.isfinite(hi):raise ValueError('栅格缺少有效数值。')
     if hi<=lo:hi=lo+1
     ramp=QgsColorRampShader(lo,hi);ramp.setColorRampType(QgsColorRampShader.Interpolated)
-    ramp.setColorRampItemList([QgsColorRampShader.ColorRampItem(lo+(hi-lo)*i/(len(TERRAIN)-1),QColor(c),f'{lo+(hi-lo)*i/(len(TERRAIN)-1):.0f}') for i,c in enumerate(TERRAIN)])
-    legend_settings=QgsColorRampLegendNodeSettings();numeric=QgsBasicNumericFormat();numeric.setNumberDecimalPlaces(0)
-    legend_settings.setNumericFormat(numeric);legend_settings.setMinimumLabel(f'{lo:,.0f}');legend_settings.setMaximumLabel(f'{hi:,.0f}')
+    colors=TERRAIN_PALETTES[STYLE_CONFIG.get('terrain_palette','terrain')]['colors']
+    if STYLE_CONFIG.get('terrain_reverse'):colors=list(reversed(colors))
+    precision=STYLE_CONFIG.get('legend_precision',0)
+    ramp.setColorRampItemList([QgsColorRampShader.ColorRampItem(lo+(hi-lo)*i/(len(colors)-1),QColor(c),f'{lo+(hi-lo)*i/(len(colors)-1):.{precision}f}') for i,c in enumerate(colors)])
+    legend_settings=QgsColorRampLegendNodeSettings();numeric=QgsBasicNumericFormat();numeric.setNumberDecimalPlaces(precision)
+    legend_settings.setNumericFormat(numeric);legend_settings.setMinimumLabel(f'{lo:,.{precision}f}');legend_settings.setMaximumLabel(f'{hi:,.{precision}f}')
     ramp.setLegendSettings(legend_settings)
     shader=QgsRasterShader(lo,hi);shader.setRasterShaderFunction(ramp)
     renderer=QgsSingleBandPseudoColorRenderer(layer.dataProvider(),1,shader)
@@ -82,6 +146,7 @@ def position(value,width=10,height=20):
 
 
 def execute(request):
+    global STYLE_CONFIG
     import processing
     job=Path(request['job']);out=job/'outputs';out.mkdir(exist_ok=True)
     project=QgsProject.instance();project.clear()
@@ -102,7 +167,7 @@ def execute(request):
                 metadata.append({'backend_id':reverse.get(layer.id(),layer.id()),'style_path':str(style),
                                  'visible':project.layerTreeRoot().findLayer(layer.id()).isVisible()})
         return {'outputs':outputs,'layer_metadata':metadata,'qgis_version':Qgis.QGIS_VERSION}
-    config=request['layout'];paper=config.get('paper','A4');landscape=config.get('orientation','landscape')=='landscape'
+    config=request['layout'];STYLE_CONFIG=config;paper=config.get('paper','A4');landscape=config.get('orientation','landscape')=='landscape'
     folder=out/'project';data=folder/'data';styles=folder/'styles'
     data.mkdir(parents=True,exist_ok=True);styles.mkdir(exist_ok=True)
     loaded={};original={};bindings={}
@@ -141,7 +206,7 @@ def execute(request):
         if not contour.isValid():raise ValueError('QGIS 等高线生成失败。')
         contour.setRenderer(QgsSingleSymbolRenderer(QgsLineSymbol.createSimple({'line_color':'91,85,66,150','line_width':'.10'})))
         labels(contour,'ELEV',7,True);project.addMapLayer(contour)
-        main_layers=[contour,shade,focus]
+        main_layers=([contour] if config.get('terrain_contours',True) else [])+([shade] if config.get('terrain_hillshade',True) else [])+[focus]
     layout=QgsPrintLayout(project);layout.initializeDefaults();layout.setName(config.get('title','Map'))
     layout.pageCollection().pages()[0].setPageSize(paper,QgsLayoutItemPage.Landscape if landscape else QgsLayoutItemPage.Portrait)
     width=layout.pageCollection().pages()[0].pageSize().width();height=layout.pageCollection().pages()[0].pageSize().height()
@@ -226,7 +291,8 @@ def execute(request):
         layout.loadFromTemplate(document,rw,True)
         items={x.id():x for x in layout.items() if isinstance(x,QgsLayoutItem) and x.id()}
         if isinstance(items.get('main_map'),QgsLayoutItemMap):items['main_map'].setLayers(main_layers)
-    for id,spec in config.get('items',{}).items():
+    specifications={id:{} for id in items};specifications.update(config.get('items',{}))
+    for id,spec in specifications.items():
         item=items.get(id)
         if not item:
             if spec.get('kind')=='label':item=add_label(layout,id,spec.get('text','文本'),10,10,50,10,10)
@@ -253,6 +319,10 @@ def execute(request):
                     item.setPicturePath(str(svg));item.setLinkedMap(main);item.setNorthMode(QgsLayoutItemPicture.TrueNorth)
             else:continue
             items[id]=item
+        if isinstance(item,QgsLayoutItemPicture) and (id=='north_arrow' or spec.get('north') or spec.get('kind')=='picture') and not spec.get('picture_path'):
+            apply_north_style(item,spec,folder,main)
+        if isinstance(item,QgsLayoutItemScaleBar):apply_scale_style(item,spec)
+        if isinstance(item,QgsLayoutItemLegend):apply_legend_style(item,spec)
         if 'x' in spec or 'y' in spec:item.attemptMove(QgsLayoutPoint(float(spec.get('x',item.pos().x())),float(spec.get('y',item.pos().y()))))
         if 'width' in spec or 'height' in spec:
             if isinstance(item,QgsLayoutItemLegend):item.setResizeToContents(False)
@@ -269,7 +339,7 @@ def execute(request):
             item.setSymbol(QgsFillSymbol.createSimple({'color':spec.get('fill','#ffffff'),'outline_color':spec.get('color',INK),'outline_width':'.25'}))
         if isinstance(item,QgsLayoutItemLabel):
             if 'text' in spec:item.setText(spec['text'])
-            if 'font_size' in spec:item.setFont(font(float(spec['font_size'])))
+            item.setFont(font(spec.get('font_size',item.font().pointSizeF()),spec.get('font_family'),spec.get('font_weight',600 if id=='title' else 400),spec.get('italic',False)))
             if 'color' in spec:item.setFontColor(QColor(spec['color']))
     layout.refresh()
     # Native legends and scale bars calculate their final bounds during the first paint.
@@ -315,7 +385,16 @@ def execute(request):
         entry={'id':id,'kind':kind,'label':id,'x':item.pos().x(),'y':item.pos().y(),'width':item.sizeWithUnits().width(),'height':item.sizeWithUnits().height(),
                'rotation':rotation,'z':item.zValue(),'visible':visible[id],'locked':item.isLocked(),'image_path':str(target)}
         item.setItemRotation(rotation)
-        if kind=='label':entry.update(text=item.text(),font_size=item.font().pointSizeF(),color=item.fontColor().name())
+        if kind in ('label','scale','legend'):
+            qfont=item.font() if kind!='legend' else item.styleFont(QgsLegendStyle.SymbolLabel)
+            weight=int(getattr(qfont.weight(),'value',qfont.weight()))
+            entry.update(font_family=qfont.family(),font_size=qfont.pointSizeF(),font_weight=weight if weight>99 else 700 if weight>=75 else 600 if weight>=63 else 500 if weight>=57 else 400)
+        if kind=='label':entry.update(text=item.text(),color=item.fontColor().name(),italic=item.font().italic())
+        if kind=='scale':entry.update(scale_style=item.style(),scale_units=item.unitLabel(),scale_segments=item.numberOfSegments(),color=item.fontColor().name(),scale_ground_segment_m=item.unitsPerSegment()*(1000 if item.units()==Qgis.DistanceUnit.Kilometers else 1))
+        if kind=='legend':entry.update(title=item.title(),legend_columns=item.columnCount(),color=item.fontColor().name())
+        if kind=='picture' and (id=='north_arrow' or config.get('items',{}).get(id,{}).get('north')):
+            spec=config.get('items',{}).get(id,{})
+            entry.update(north=True,north_style=spec.get('north_style',config.get('north_style','arrow')),north_color=spec.get('north_color',spec.get('color',config.get('north_color','#263b43'))))
         if kind=='map':
             e=item.extent();entry.update(map_extent=[e.xMinimum(),e.yMinimum(),e.xMaximum(),e.yMaximum()],map_crs=item.crs().authid())
         scene.append(entry)

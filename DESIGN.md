@@ -31,33 +31,33 @@ colors:
   map-ground-dark-default: '#142938'
 typography:
   brand:
-    fontFamily: '''Avenir Next'', -apple-system, BlinkMacSystemFont, ''PingFang SC'',
-      ''Microsoft YaHei'', sans-serif'
+    fontFamily: '-apple-system, BlinkMacSystemFont, ''PingFang SC'', ''Segoe UI'',
+      ''Microsoft YaHei UI'', ''Noto Sans CJK SC'', sans-serif'
     fontSize: 24px
     fontWeight: 650
     letterSpacing: -0.7px
   assistant-title:
-    fontFamily: '''Avenir Next'', -apple-system, BlinkMacSystemFont, ''PingFang SC'',
-      ''Microsoft YaHei'', sans-serif'
+    fontFamily: '-apple-system, BlinkMacSystemFont, ''PingFang SC'', ''Segoe UI'',
+      ''Microsoft YaHei UI'', ''Noto Sans CJK SC'', sans-serif'
     fontSize: 17px
     fontWeight: 650
   body:
-    fontFamily: '''Avenir Next'', -apple-system, BlinkMacSystemFont, ''PingFang SC'',
-      ''Microsoft YaHei'', sans-serif'
-    fontSize: 13px
+    fontFamily: '-apple-system, BlinkMacSystemFont, ''PingFang SC'', ''Segoe UI'',
+      ''Microsoft YaHei UI'', ''Noto Sans CJK SC'', sans-serif'
+    fontSize: 14px
     lineHeight: 1.5
   assistant-body:
-    fontFamily: '''Avenir Next'', -apple-system, BlinkMacSystemFont, ''PingFang SC'',
-      ''Microsoft YaHei'', sans-serif'
-    fontSize: 13px
+    fontFamily: '-apple-system, BlinkMacSystemFont, ''PingFang SC'', ''Segoe UI'',
+      ''Microsoft YaHei UI'', ''Noto Sans CJK SC'', sans-serif'
+    fontSize: 14px
     lineHeight: 1.95
   control:
-    fontFamily: '''Avenir Next'', -apple-system, BlinkMacSystemFont, ''PingFang SC'',
-      ''Microsoft YaHei'', sans-serif'
+    fontFamily: '-apple-system, BlinkMacSystemFont, ''PingFang SC'', ''Segoe UI'',
+      ''Microsoft YaHei UI'', ''Noto Sans CJK SC'', sans-serif'
     fontSize: 12px
   metadata:
-    fontFamily: '''Avenir Next'', -apple-system, BlinkMacSystemFont, ''PingFang SC'',
-      ''Microsoft YaHei'', sans-serif'
+    fontFamily: '-apple-system, BlinkMacSystemFont, ''PingFang SC'', ''Segoe UI'',
+      ''Microsoft YaHei UI'', ''Noto Sans CJK SC'', sans-serif'
     fontSize: 11px
 rounded:
   field: 8px
@@ -106,7 +106,7 @@ The light workspace uses silver-white surfaces and deep petrol text. The dark in
 
 ## Typography
 
-The operational UI uses the Avenir Next / native system / CJK stack in frontmatter. Main copy and assistant responses are 13px; assistant prose has 1.95 line height. Controls are 12px and supporting metadata 11px. The GAIA wordmark is 24px at weight 650; the assistant title is 17px at weight 650. The map or document, rather than decorative display typography, leads the interface. Print text remains authored in the native layout.
+The operational UI uses the native system / PingFang / Segoe UI / Microsoft YaHei UI / Noto CJK stack in frontmatter. Main copy and assistant responses are 14px; assistant prose has 1.95 line height. Controls are 12px and supporting metadata 11px. The GAIA wordmark is 24px at weight 650; the assistant title is 17px at weight 650. The map or document, rather than decorative display typography, leads the interface. Appearance offers system, Chinese sans and Chinese serif font stacks through --ui-font, saved in the existing browser preference. Print text uses the actual QGIS font database independently; auto chooses an installed Chinese family, and title/legend/scale have individual overrides. Native font weight, size, color and italic properties persist with the layout. Style controls use two-column north glyph previews and five terrain ramp swatches with selected borders; no decorative imagery is added to the map.
 
 ## Layout
 

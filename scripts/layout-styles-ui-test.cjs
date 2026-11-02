@@ -1,0 +1,64 @@
+// Real public USGS DEM + Census SHP, isolated scripts/qa_quality_server.py only.
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const assert=require('node:assert/strict'),fs=require('node:fs');
+const base=process.env.BASE_URL||'http://127.0.0.1:8767';
+(async()=>{
+ const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH});
+ try{
+  const page=await browser.newPage({viewport:{width:1600,height:1000}}),errors=[];
+  page.on('pageerror',e=>errors.push(e.message));fs.mkdirSync('outputs/layout-styles',{recursive:true});
+  const get=async p=>{const r=await page.request.get(base+'/api'+p,{timeout:90000});assert(r.ok(),await r.text());return r.json()};
+  const wait=async predicate=>{for(let i=0;i<100;i++){if(predicate(await get('/layout')))return;await page.waitForTimeout(150)}throw Error('Layout update not persisted')};
+  const native=async()=>{const scene=await get('/layout/scene');await page.waitForFunction(id=>[...document.querySelectorAll('.layout-page .layout-item image')].every(el=>el.href.baseVal.includes(id))&&!document.querySelector('.document-toolbar').textContent.includes('正在更新'),scene.id,{timeout:90000});await page.waitForLoadState('networkidle');return Object.fromEntries(scene.elements.map(e=>[e.id,e]))};
+  const select=async label=>{await page.getByRole('button',{name:'数据面板',exact:true}).click();await page.locator('.contents-tree').getByRole('button',{name:label,exact:true}).click()};
+  const shot=async name=>{const close=page.getByRole('button',{name:'关闭提示',exact:true});if(await close.isVisible())await close.click();await page.screenshot({path:'outputs/layout-styles/'+name+'.png',animations:'disabled'})};
+  const reset=await page.request.patch(base+'/api/layout',{data:{north_style:'arrow',scale_style:'Single Box',scale_units:'km',scale_segments:2,terrain_palette:'terrain',items:{}}});assert(reset.ok());
+  const options=await get('/layout/styles');assert(options.fonts.length>0);assert.equal(options.north_styles.length,4);assert.equal(options.scale_styles.length,8);
+  await page.goto(base);await page.getByRole('heading',{name:'GAIA 助手',exact:true}).waitFor();
+  await page.getByRole('button',{name:'出图布局',exact:true}).click();
+  await page.waitForSelector('.layout-page .layout-item',{timeout:90000});
+  const baseline=await native();
+  await select('指北针');await page.getByRole('button',{name:'指北针 罗盘玫瑰',exact:true}).click();
+  await wait(l=>l.items.north_arrow?.north_style==='rose');let scene=await native();assert.equal(scene.north_arrow.north_style,'rose');
+  await shot('north');
+  await select('比例尺');await page.getByLabel('比例尺样式',{exact:true}).selectOption('Double Box');
+  await page.getByLabel('比例尺单位',{exact:true}).selectOption('m');await page.getByLabel('比例尺分段数',{exact:true}).selectOption('4');
+  await wait(l=>l.items.scale_bar?.scale_style==='Double Box'&&l.items.scale_bar?.scale_units==='m'&&l.items.scale_bar?.scale_segments===4);
+  scene=await native();assert.equal(scene.scale_bar.scale_style,'Double Box');assert.equal(scene.scale_bar.scale_units,'m');
+  assert.equal(scene.scale_bar.scale_ground_segment_m,baseline.scale_bar.scale_ground_segment_m);
+  await shot('scale');
+  await select('标题');const family=options.fonts.some(f=>f.family==='Songti SC')?'Songti SC':options.default_font;
+  await page.getByLabel('元素字体',{exact:true}).selectOption(family);await page.getByLabel('元素字重',{exact:true}).selectOption('700');
+  await page.getByLabel('元素字号',{exact:true}).fill('24');await wait(l=>l.items.title?.font_family===family&&l.items.title?.font_size===24&&l.items.title?.font_weight===700);
+  scene=await native();assert.equal(scene.title.font_family,family);assert.equal(scene.title.font_size,24);assert.equal(scene.title.font_weight,700);
+  await shot('typography');
+  await page.getByTitle('布局设置',{exact:true}).click();await page.getByLabel('高程色带',{exact:true}).selectOption('bluegreen');
+  await wait(l=>l.terrain_palette==='bluegreen');scene=await native();assert.notEqual(scene.main_map.image_url,baseline.main_map.image_url);
+  await shot('terrain');
+  // Change styles through the actual assistant, then verify the manual controls agree.
+  await page.getByLabel('自然语言任务',{exact:true}).fill('指北针改成双色三角，比例尺使用下方刻度，单位千米，高程改成柔和绿棕色带');
+  await page.getByRole('button',{name:'发送任务',exact:true}).click();
+  await wait(l=>l.items.north_arrow?.north_style==='triangle'&&l.items.scale_bar?.scale_style==='Line Ticks Down'&&l.items.scale_bar?.scale_units==='km'&&l.terrain_palette==='earth');
+  await page.waitForFunction(()=>document.querySelector('.statusbar').textContent.includes('就绪'),null,{timeout:90000});
+  await select('指北针');await page.getByRole('button',{name:'指北针 双色三角',exact:true}).waitFor();
+  assert.equal(await page.getByRole('button',{name:'指北针 双色三角',exact:true}).getAttribute('aria-pressed'),'true');
+  scene=await native();assert.equal(scene.scale_bar.scale_style,'Line Ticks Down');assert.equal(scene.north_arrow.north_style,'triangle');
+  await shot('natural-language');
+  await page.getByRole('button',{name:'导出布局',exact:true}).click();
+  await page.getByRole('dialog',{name:'导出地图成果'}).getByRole('combobox').last().selectOption('100');
+  const [download]=await Promise.all([page.waitForEvent('download',{timeout:90000}),page.getByRole('button',{name:'导出并下载',exact:true}).click()]);
+  await download.saveAs('outputs/layout-styles/verified-map.pdf');assert.equal(fs.readFileSync('outputs/layout-styles/verified-map.pdf').subarray(0,5).toString(),'%PDF-');
+  await page.getByRole('button',{name:'外观设置',exact:true}).click();await page.getByLabel('界面字体',{exact:true}).selectOption('serif');
+  const uiFont=await page.locator('.workbench').evaluate(el=>getComputedStyle(el).fontFamily);assert(uiFont.includes('Songti SC'));
+  await page.reload();await page.getByRole('button',{name:'外观设置',exact:true}).click();assert.equal(await page.getByLabel('界面字体',{exact:true}).inputValue(),'serif');
+  await page.getByLabel('界面字体',{exact:true}).selectOption('system');
+  await page.getByRole('button',{name:'深色',exact:true}).click();await page.getByRole('button',{name:'出图布局',exact:true}).click();
+  await page.waitForSelector('.layout-page .layout-item',{timeout:90000});await select('指北针');await shot('dark-north');
+  await page.setViewportSize({width:390,height:844});await page.getByRole('button',{name:'数据与工具',exact:true}).click();await shot('mobile-styles');
+  assert(!(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)));
+  const buttons=await page.locator('.north-presets button').evaluateAll(nodes=>nodes.map(n=>{const b=n.getBoundingClientRect();return b.x>=0&&b.right<=innerWidth}));assert(buttons.every(Boolean));
+  assert.deepEqual(errors,[]);
+  const result={passed:true,defaultFont:options.default_font,titleFont:family,checks:['real-public-data','four-north-presets','eight-native-scale-styles-catalog','manual-to-native-scene','km-to-m-ground-distance-preserved','actual-installed-fonts','font-weight-and-size','terrain-ramp-change','assistant-to-manual-style-sync','real-PDF-download','UI-font-preference-persistence','dark-style-panel','mobile-style-panel'],errors};
+  fs.writeFileSync('outputs/layout-styles/result.json',JSON.stringify(result,null,2));console.log(JSON.stringify(result));
+ }finally{await browser.close()}
+})().catch(e=>{console.error(e);process.exit(1)});

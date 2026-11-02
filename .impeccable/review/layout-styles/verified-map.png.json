@@ -1,0 +1,8 @@
+{
+  "kind": "rendered-export",
+  "source": "outputs/layout-styles/verified-map.png",
+  "dataset": "Real USGS 3DEP Rainier DEM + Census 2024 Washington counties",
+  "generation": "QGIS PDF exported by GAIA, independently rendered by Poppler",
+  "sha256": "310734012e0854e0f549f2f264550d82cc634b55baf115fb91f682b530ce5278",
+  "approval": "Functional QA evidence; not a user-approved new design reference"
+}

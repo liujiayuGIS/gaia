@@ -282,7 +282,7 @@ def studio_offline(registry,store,run,cancel):
         crs=re.search(r'EPSG\s*:\s*(\d+)',text,re.I)
         result=call('import_data',{'asset_id':asset['id'],'resource':resources[0]['path'],'source_crs':'EPSG:'+crs.group(1) if crs else None})
         return f"已导入 {result['name']}，生成独立图层。坐标系：{result['crs']}。"
-    if re.search(r'指北针|图例|比例尺|标题|(?<!列)出图|导出.*(png|pdf|svg|jpeg|tiff|图片)',lower):
+    if re.search(r'指北针|图例|比例尺|标题|高程|色带|等高|山体阴影|字体|(?<!列)出图|导出.*(png|pdf|svg|jpeg|tiff|图片)',lower):
         changes={}
         for label,key in [('指北针','north_position'),('图例','legend_position'),('比例尺','scale_position')]:
             match=re.search(label+r'.{0,10}?(左上|右上|左下|右下)',text)
@@ -296,12 +296,24 @@ def studio_offline(registry,store,run,cancel):
         if re.search(r'当前范围|当前地图',text):
             bounds=store.setting('map_state',{}).get('bounds')
             if bounds:changes['extent']=bounds
+        from .layout_language import parse_style_commands,FONT_ALIASES
+        fonts=call('get_layout_styles',{})['fonts'] if ('字体' in text or any(k in text for k in FONT_ALIASES) or re.search(r'font|sans|serif|pingfang|songti|arial',lower)) else []
+        styling,elements=parse_style_commands(text,fonts)
+        changes.update(styling)
+        if elements or any(k in changes for k in ('north_position','legend_position','scale_position')):
+            current=call('get_layout',{})
+            items={k:dict(v) for k,v in current['items'].items()}
+            for key,id in [('north_position','north_arrow'),('legend_position','legend'),('scale_position','scale_bar')]:
+                if key in changes and id in items:
+                    items[id].pop('x',None);items[id].pop('y',None)
+            for id,style in elements.items():items[id]={**items.get(id,{}),**style}
+            changes['items']=items
         if changes:call('update_layout',{'changes':changes})
         fmt=re.search(r'png|pdf|svg|jpeg|jpg|tiff|tif',lower)
         if '导出' in text or '出图' in text:
             result=call('export_map',{'format':fmt.group(0) if fmt else 'pdf','dpi':150})
             return f"地图已导出：{result['name']}\n下载：{result['url']}"
-        return '布局已更新，可切换到“制图布局”预览。'
+        return '布局已更新，手动设置和导出会使用相同样式。' if changes else '离线模式尚未识别这项布局要求。可使用明确样式名称，或连接模型后描述完整制图要求。'
     if re.search(r'算法|工具.*列表|能做什么',text):
         from .algorithms import CATALOG
         return '当前可执行算法：'+ '、'.join(x['name'] for x in CATALOG)+'。复杂链式任务请使用模型模式。'

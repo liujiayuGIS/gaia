@@ -94,6 +94,9 @@ def run(request,app):
                 'default_error':probe.errorString(),'explicit_ok':explicit_ok,
                 'explicit_error':explicit.errorString(),'TMP':os.environ.get('TMP'),'TEMP':os.environ.get('TEMP')}))
         probe.close()
+    if request['operation']=='layout_styles':
+        from qgis_cartography import font_catalog
+        return font_catalog()
     if request['operation']=='catalog':
         return {'version':Qgis.QGIS_VERSION,'providers':[{'id':p.id(),'name':p.name()} for p in app.processingRegistry().providers()],
                 'algorithms':[definition(a) for a in app.processingRegistry().algorithms()]}

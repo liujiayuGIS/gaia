@@ -1,0 +1,8 @@
+{
+  "kind": "qa-screenshot",
+  "source": "outputs/layout-styles/mobile-styles.png",
+  "dataset": "Real USGS 3DEP Rainier DEM + Census 2024 Washington counties",
+  "generation": "Chrome headless of isolated GAIA QA workspace",
+  "sha256": "dcca0b973c70018fd8bc2d6397b7f693743aa29ed7283396fc3e09d6babb85e5",
+  "approval": "Functional QA evidence; not a user-approved new design reference"
+}

@@ -1,6 +1,7 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {MousePointer2,Move,ZoomIn,ZoomOut,Scan,Undo2,Redo2,Lock,Unlock,Eye,EyeOff,ArrowUp,ArrowDown,AlignLeft,AlignCenter,AlignRight,Trash2,RefreshCw} from 'lucide-react';
 import {api} from './shared';
+import {ElementStyleControls} from './CartographyStyles';
 
 const labels={main_map:'主地图框',title:'标题',subtitle:'副标题',source:'来源说明',legend:'图例',north_arrow:'指北针',scale_bar:'比例尺',overview_map:'位置插图',overview_title:'插图标题'};
 export function elementLabel(item){return labels[item.id]||item.text?.slice(0,18)||({map:'地图框',label:'文本',legend:'图例',scale:'比例尺',picture:'图片 / 指北针',shape:'图形'}[item.kind])||item.id;}
@@ -73,10 +74,10 @@ export default function LayoutEditor({layout,revision,save,onScene,selection,set
  </div>
 }
 
-export function ElementProperties({nodes,selection,update}){
+export function ElementProperties({nodes,selection,update,styleOptions,layout,saveLayout}){
  const item=nodes.find(n=>n.id===selection[0]);
  if(!item)return <div className="pane-empty">在页面或内容列表中选择一个布局元素。</div>;
- return <div className="element-properties"><h3>{elementLabel(item)}</h3><fieldset><legend>位置和大小</legend><div className="field-grid">{[['x','X'],['y','Y'],['width','宽度'],['height','高度'],['rotation','旋转']].map(([key,label])=><label key={key}>{label}<div className="unit-input"><input aria-label={'元素'+label} type="number" step=".1" value={item[key]??0} onChange={e=>update(item.id,{[key]:Number(e.target.value)})}/><span>{key==='rotation'?'°':'mm'}</span></div></label>)}</div></fieldset>
+ return <div className="element-properties"><h3>{elementLabel(item)}</h3><ElementStyleControls item={item} update={update} options={styleOptions} layout={layout} saveLayout={saveLayout}/><fieldset><legend>位置和大小</legend><div className="field-grid">{[['x','X'],['y','Y'],['width','宽度'],['height','高度'],['rotation','旋转']].map(([key,label])=><label key={key}>{label}<div className="unit-input"><input aria-label={'元素'+label} type="number" step=".1" value={item[key]??0} onChange={e=>update(item.id,{[key]:Number(e.target.value)})}/><span>{key==='rotation'?'°':'mm'}</span></div></label>)}</div></fieldset>
  {item.kind==='label'&&<fieldset><legend>文本</legend><label>内容<textarea aria-label="元素文本" value={item.text||''} onChange={e=>update(item.id,{text:e.target.value})}/></label><div className="field-grid"><label>字号<input aria-label="元素字号" type="number" min="1" max="200" value={item.font_size||10} onChange={e=>update(item.id,{font_size:Number(e.target.value)})}/></label><label>颜色<input aria-label="元素颜色" type="color" value={item.color||'#222222'} onChange={e=>update(item.id,{color:e.target.value})}/></label></div></fieldset>}
  {item.kind==='map'&&<fieldset><legend>地图范围 · {item.map_crs}</legend><div className="field-grid">{['X 最小值','Y 最小值','X 最大值','Y 最大值'].map((label,i)=><label key={label}>{label}<input type="number" step="any" value={item.map_extent?.[i]??0} onChange={e=>{const extent=[...(item.map_extent||[0,0,1,1])];extent[i]=Number(e.target.value);update(item.id,{map_extent:extent})}}/></label>)}</div><small>调整范围可改变地图比例与中心。</small></fieldset>}
  {item.kind==='legend'&&<fieldset><legend>图例</legend><label>标题<input value={item.title||''} placeholder="使用布局中的图例标题" onChange={e=>update(item.id,{title:e.target.value})}/></label></fieldset>}

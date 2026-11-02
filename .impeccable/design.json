@@ -38,8 +38,20 @@
       "frontend/src/atlas.css",
       "frontend/src/ProWorkbench.jsx",
       "frontend/src/ProcessDrawer.jsx",
-      "frontend/src/LayoutEditor.jsx"
-    ]
+      "frontend/src/LayoutEditor.jsx",
+      "frontend/src/CartographyStyles.jsx"
+    ],
+    "typography": {
+      "uiDefault": "-apple-system,BlinkMacSystemFont,'PingFang SC','Segoe UI','Microsoft YaHei UI','Noto Sans CJK SC',sans-serif",
+      "uiPresets": [
+        "system",
+        "sans",
+        "serif"
+      ],
+      "bodyPx": 14,
+      "assistantLineHeight": 1.95,
+      "printFont": "Actual QGIS QFontDatabase; installed Chinese default and per-element overrides"
+    }
   },
   "components": [],
   "narrative": {

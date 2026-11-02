@@ -22,6 +22,7 @@ from pydantic import BaseModel,ConfigDict,Field
 from typing import Literal
 from .formats import frame,raster_path,raster_preview
 from .store import now
+from .plugins.cartography_styles import validate_item_style
 
 LOCK=threading.RLock()
 for f in ['/System/Library/Fonts/Supplemental/Arial Unicode.ttf',str(Path(os.environ.get('SystemRoot','C:/Windows'))/'Fonts/msyh.ttc'),'/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc']:
@@ -56,6 +57,17 @@ class Layout(BaseModel):
     grid: bool=False
     source_note: str=Field(default='数据与处理记录保存在本地项目中',max_length=300)
     extent: list[float] | None=Field(default=None,min_length=4,max_length=4)
+    font_family: str=Field(default='auto',min_length=1,max_length=100)
+    north_style: Literal['arrow','triangle','rose','minimal']='arrow'
+    north_color: str=Field(default='#263b43',pattern=r'^#[0-9a-fA-F]{6}$')
+    scale_style: Literal['Single Box','Double Box','Line Ticks Middle','Line Ticks Down','Line Ticks Up','stepped','hollow','Numeric']='Single Box'
+    scale_units: Literal['m','km']='km'
+    scale_segments: int=Field(default=2,ge=1,le=10)
+    terrain_palette: Literal['terrain','earth','bluegreen','viridis','gray']='terrain'
+    terrain_reverse: bool=False
+    terrain_hillshade: bool=True
+    terrain_contours: bool=True
+    legend_precision: int=Field(default=0,ge=0,le=3)
 
 
 def get_layout(store):
@@ -67,6 +79,7 @@ def update_layout(store,changes):
     import re
     if len(layout.items)>100:raise ValueError('布局元素上限100个。')
     for id,item in layout.items.items():
+        validate_item_style(item)
         if not re.fullmatch(r'[a-zA-Z0-9_-]{1,80}',id):raise ValueError('布局元素ID格式无效。')
         for key in ('x','y','width','height','rotation','z','font_size'):
             if key in item:
@@ -85,7 +98,30 @@ def update_layout(store,changes):
     if layout.extent:
         x0,y0,x1,y1=layout.extent
         if not(-180<=x0<x1<=180 and -85<=y0<y1<=85):raise ValueError('出图范围必须是有效 WGS84 边界。')
+    requested={layout.font_family}|{i['font_family'] for i in layout.items.values() if 'font_family' in i}
+    requested.discard('auto')
+    if requested:
+        available={x['family'] for x in layout_styles(store)['fonts']}
+        if not requested<=available:raise ValueError('字体未安装：'+', '.join(sorted(requested-available))+'。请从实际字体目录选择。')
     return store.put_object('settings','layout',layout.model_dump())
+
+
+def layout_styles(store):
+    from .plugins import PluginManager
+    plugin=PluginManager(store).get('qgis')
+    return plugin.layout_styles()
+
+
+def update_layout_element(store,element_id,changes):
+    current=get_layout(store)
+    known={'main_map','title','subtitle','source','legend','north_arrow','scale_bar','overview_map','overview_title'}|set(current['items'])
+    if element_id not in known:
+        from .plugins import PluginManager
+        plugin=PluginManager(store).choose('cartography',current['plugin_id'])
+        known.update(x['id'] for x in plugin.scene(store,current,store.ordered_layers())['elements'])
+    if element_id not in known:raise ValueError('布局中没有该元素，请先读取实际元素目录。')
+    items={**current['items'],element_id:{**current['items'].get(element_id,{}),**changes}}
+    return update_layout(store,{'items':items})
 
 
 def position(value):
@@ -104,6 +140,8 @@ def render_map(store,fmt='svg',dpi=150,layer_ids=None,overrides=None,preview=Fal
         content=renderer.render(store,config,fmt,dpi,layers,preview=preview)
         if evidence is not None:evidence.update(getattr(renderer,'render_evidence',{}))
         return content
+    advanced=(config.font_family!='auto' or config.north_style!='arrow' or config.north_color!='#263b43' or config.scale_style!='Single Box' or config.scale_units!='km' or config.scale_segments!=2 or config.terrain_palette!='terrain' or config.terrain_reverse or not config.terrain_hillshade or not config.terrain_contours or config.legend_precision!=0 or any(set(x)&{'north_style','scale_style','scale_units','scale_segments','legend_columns','font_family','font_weight','italic'} for x in config.items.values()))
+    if advanced:raise ValueError('当前高级制图样式需要 QGIS 渲染器，请将制图插件切换为 QGIS 或自动。')
     if config.template!='standard':
         from .professional import render
         return render(store,config,layers,fmt,dpi)

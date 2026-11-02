@@ -10,6 +10,7 @@ from . import runtime
 
 _LOCK=threading.Lock()
 _CATALOG=None
+_STYLE_OPTIONS=None
 
 
 class QGISPlugin(AnalysisPlugin):
@@ -42,6 +43,15 @@ class QGISPlugin(AnalysisPlugin):
         except Exception as exc:return {'available':False,'error':str(exc),'operations':[]}
 
     def algorithms(self):return self.catalog()['algorithms']
+
+    def layout_styles(self):
+        global _STYLE_OPTIONS
+        if _STYLE_OPTIONS is None:
+            from types import SimpleNamespace
+            root=runtime.cache_root();root.mkdir(parents=True,exist_ok=True)
+            job=runtime.job_folder(SimpleNamespace(root=root))
+            _STYLE_OPTIONS=runtime.execute(runtime.qgis_python(),'qgis_worker.py',{'operation':'layout_styles'},job,timeout=90,restricted=False)
+        return _STYLE_OPTIONS
 
     def execute(self,store,algorithm_id,arguments,run_id,cancel):
         spec=next((x for x in self.algorithms() if x['id']==algorithm_id),None)
@@ -170,7 +180,7 @@ class QGISPlugin(AnalysisPlugin):
 
     def scene(self,store,layout,layers):
         config=layout.model_dump() if hasattr(layout,'model_dump') else layout
-        key=hashlib.sha256(json.dumps({'layout':config,'layers':store.ordered_layers(),'scene_version':5},sort_keys=True,ensure_ascii=False).encode()).hexdigest()
+        key=hashlib.sha256(json.dumps({'layout':config,'layers':store.ordered_layers(),'scene_version':7},sort_keys=True,ensure_ascii=False).encode()).hexdigest()
         try:return store.object('layout_scenes',key)['scene']
         except ValueError:pass
         job,request=self.prepare(store,config,layers,'project')

@@ -251,6 +251,12 @@ def create_app(workspace=None):
         layout.update(plugin_id=item['plugin_id'],template_id=template_id,template_bindings=bindings)
         return cartography.update_layout(store,layout)
 
+    @app.get('/api/layout/styles')
+    def layout_styles():return cartography.layout_styles(store)
+
+    @app.patch('/api/layout/items/{element_id}')
+    def layout_item(element_id:str,body:dict):return cartography.update_layout_element(store,element_id,body)
+
     @app.get('/api/layout/scene')
     def layout_scene():
         from .plugins import PluginManager

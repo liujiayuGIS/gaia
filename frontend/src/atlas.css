@@ -6,8 +6,8 @@
   --glass:color-mix(in srgb,var(--pane) 95%,transparent);
   --float-shadow:0 6px 26px #193c511a,0 1px 4px #193c510c;
   --assistant-width:clamp(350px,27vw,430px); --folio-width:248px;
-  font-family:'Avenir Next',-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;
-  font-size:13px; background:var(--ground); color:var(--ink);
+  font-family:var(--ui-font,-apple-system,BlinkMacSystemFont,'PingFang SC','Segoe UI','Microsoft YaHei UI','Noto Sans CJK SC',sans-serif);
+  font-size:14px; background:var(--ground); color:var(--ink);
 }
 .atlas-workbench[data-theme=dark] {
   --ground:#152432; --pane:#1c3040; --ribbon:#203747; --ink:#edf4f8;
@@ -61,7 +61,7 @@
 .atlas-workbench .layer-entry {border-radius:10px;padding:6px 2px;margin-bottom:2px}
 .atlas-workbench .layer-entry button,.atlas-workbench .tree-row button {background:transparent;border:0}
 .atlas-workbench .layer-entry button:hover,.atlas-workbench .tree-row button:hover {background:var(--hover)}
-.atlas-workbench .tree-name {font-size:13px;min-height:28px}
+.atlas-workbench .tree-name {font-size:14px;min-height:28px}
 .atlas-workbench .layer-symbol {font-size:11px;padding-bottom:4px;gap:7px}
 .atlas-workbench .tree-row {min-height:30px;gap:3px}
 .atlas-workbench .tree-row.selected {background:var(--selection)}
@@ -147,15 +147,15 @@
 .atlas-workbench .starter-actions button:hover {color:var(--link)}
 .atlas-workbench .assistant-composer {margin:0 16px 16px;padding:12px;border-radius:14px;border:1px solid var(--border);background:var(--input);display:grid;grid-template-columns:1fr auto;row-gap:0;flex-shrink:0}
 .atlas-workbench .composer-context {grid-column:1/-1;font-size:11px;gap:6px;line-height:1.5;padding-bottom:8px}
-.atlas-workbench .assistant-composer textarea {grid-column:1/-1;width:100%;font-size:13px;min-height:78px;max-height:180px;line-height:1.8;padding:10px 0;resize:vertical}
+.atlas-workbench .assistant-composer textarea {grid-column:1/-1;width:100%;font-size:14px;min-height:78px;max-height:180px;line-height:1.8;padding:10px 0;resize:vertical}
 .composer-actions {display:flex;align-items:center;gap:4px;min-width:0}
 .atlas-workbench .composer-actions button {min-height:30px;padding:4px;background:transparent;border:0;color:var(--muted)}
 .composer-actions span {font-size:9px;color:var(--muted);white-space:nowrap}
 .atlas-workbench .assistant-composer>button {grid-column:2;min-height:33px;font-size:12px;border-radius:9px;padding:5px 11px}
-.atlas-workbench .user-message {font-size:13px;line-height:1.85;border-radius:12px 12px 3px 12px;padding:12px 14px;background:var(--selection);margin-left:20px;white-space:pre-wrap;overflow-wrap:anywhere}
+.atlas-workbench .user-message {font-size:14px;line-height:1.85;border-radius:12px 12px 3px 12px;padding:12px 14px;background:var(--selection);margin-left:20px;white-space:pre-wrap;overflow-wrap:anywhere}
 .atlas-workbench .message-author {font-size:13px;margin-top:22px;font-weight:650;color:var(--ink)}
 .atlas-workbench .message-author>span:last-child {font-size:10px;color:var(--muted);font-weight:400}
-.atlas-workbench .response-text {font-size:13px;line-height:1.95;overflow-wrap:anywhere}
+.atlas-workbench .response-text {font-size:14px;line-height:1.95;overflow-wrap:anywhere}
 .atlas-workbench .trace {padding:0;background:transparent;border:0;border-bottom:1px solid var(--border-soft);border-radius:0;margin:14px 0}
 .atlas-workbench .trace>summary {padding:10px 0;font-size:11px;gap:7px}
 .atlas-workbench .trace-step {padding:2px 8px;background:var(--input);border-radius:8px;margin-bottom:5px}
@@ -307,3 +307,19 @@
 @media(prefers-reduced-motion:no-preference) {
   .process-mark,.step-number,button {transition:background-color 140ms ease-out,color 140ms ease-out}
 }
+
+/* Cartographic styles are native QGIS properties, previewed on the real page. */
+.atlas-workbench .style-field {display:flex;flex-direction:column;gap:7px;font-size:12px;color:var(--muted);min-width:0;margin:0 0 12px}
+.atlas-workbench .style-field select {width:100%;min-width:0;text-overflow:ellipsis}
+.atlas-workbench .cartographic-styles {min-width:0}
+.atlas-workbench .style-help {font-size:11px;line-height:1.85;color:var(--muted);margin:8px 0 12px}
+.north-presets {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0 0 14px}
+.atlas-workbench .north-presets button {display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 4px;font-size:11px;background:var(--input);border:1px solid var(--border);min-width:0}
+.north-presets img {height:54px;width:30px;padding:3px;background:white;border-radius:5px}
+.atlas-workbench .north-presets button[aria-pressed=true],.atlas-workbench .terrain-swatches button[aria-pressed=true] {border-color:var(--accent-ui);background:var(--selection);box-shadow:inset 0 0 0 1px var(--accent-ui)}
+.terrain-swatches {display:flex;flex-direction:column;gap:6px;margin:8px 0 14px}
+.atlas-workbench .terrain-swatches button {display:flex;align-items:center;text-align:left;gap:10px;border:1px solid var(--border-soft);padding:7px 9px;background:var(--input);font-size:11px;min-height:32px}
+.terrain-swatches i {display:block;width:90px;height:11px;border-radius:4px;border:1px solid #263b4320;flex-shrink:0}
+.font-specimen {font-size:20px;line-height:1.7;padding:12px 10px;margin:0 0 14px;border-radius:8px;color:var(--ink);background:var(--input);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.atlas-workbench .pane-fields,.atlas-workbench .element-properties {line-height:1.65}
+.atlas-workbench .pane-fields legend,.atlas-workbench .element-properties legend {font-size:13px;font-weight:600;color:var(--ink)}
