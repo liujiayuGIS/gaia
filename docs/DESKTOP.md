@@ -2,7 +2,7 @@
 
 桌面版使用 Electron 打开现有工作台，在本机启动独立 Python 服务。安装包包含 Python、QGIS、GDAL/PROJ 和科学计算库，无需用户另装 Python、Node 或 QGIS。模型推理需配置自己的 API；离线 GIS 运算与制图不依赖云端模型。
 
-日常操作见 [GAIA 用户手册](USER_GUIDE.md)。**当前仅发布了 macOS 安装包，Windows 源码和构建流程已提交，安装包仍待验收**；最新进度见 [交付状态](DESKTOP_STATUS.md)。
+日常操作见 [GAIA 用户手册](USER_GUIDE.md)。各平台本次可下载的安装包以 [GitHub Releases](https://github.com/liujiayuGIS/gaia/releases) 实际文件为准；具体原生安装验收见 [交付状态](DESKTOP_STATUS.md)。
 
 ## 下载与安装
 
@@ -11,10 +11,9 @@
 |系统|安装包|要求|
 |---|---|---|
 |macOS Apple Silicon|GAIA-版本-mac-arm64.dmg|macOS 15 或更新；M 系列处理器|
-|macOS Intel|GAIA-版本-mac-x64.dmg|macOS 15 或更新；Intel 处理器|
-|Windows（待发布）|计划提供 GAIA-版本-win-x64.exe|Windows 10/11 64 位；x64 处理器；尚未完成安装包验收|
+|Windows x64|GAIA-版本-win-x64.exe（以该 Release 实际文件为准）|Windows 10/11 64 位；x64 处理器|
 
-macOS 打开 DMG 并将 GAIA 拖入 Applications。Windows 安装向导的设计为默认安装到当前用户目录，无需管理员权限，实际安装仍待验收。首次启动会校验并解压 GIS 运行时，可能需要几分钟和数 GB 磁盘空间；之后直接启动。首次初始化不需要额外下载 GIS 环境。
+macOS 打开 DMG 并将 GAIA 拖入 Applications。Windows 安装向导默认安装到当前用户目录，无需管理员权限。首次启动会校验并解压 GIS 运行时，可能需要几分钟和数 GB 磁盘空间；之后直接启动。首次初始化不需要额外下载 GIS 环境。
 
 交互地图优先使用 WebGL 2；图形环境不可用时，自动切换到 Leaflet 兼容二维地图，支持矢量、栅格、图层顺序和要素交互。QGIS 数据分析与出图照常运行。
 
@@ -38,7 +37,9 @@ macOS 打开 DMG 并将 GAIA 拖入 Applications。Windows 安装向导的设计
 
 ## 从源码构建
 
-三种包必须分别在目标 OS/架构构建。仓库的 `.github/workflows/desktop.yml` 在 macOS ARM64、macOS x64 和 Windows x64 上构建与验收。成功后提供带校验和的预发布安装包；失败时草稿不会变成可下载正式发布。
+程序、安装盘和快捷方式统一使用 GAIA 名称与用户提供的盖亚标志。安装包包含当前用户手册，可从“帮助 → 打开本地用户手册”读取。
+
+只提供 macOS Apple Silicon（arm64）和 Windows x64 两种安装包；已移除 Intel Mac 构建。仓库的 `.github/workflows/desktop.yml` 在对应平台上构建与验收。所选平台全部成功后提供带校验和的预发布安装包；失败时草稿不会自动发布。手动触发时可用 target 选择 all、windows 或 macos，方便补齐某个平台。
 
 本机构建需要 Node.js 24、micromamba 和 Python。先安装前端、桌面依赖，然后生成包含全部 GIS 依赖的运行时：
 

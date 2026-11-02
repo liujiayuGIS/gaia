@@ -1,0 +1,8 @@
+{
+  "kind": "actual-application-screenshot",
+  "source": ".impeccable/review/desktop.png",
+  "repository": "liujiayuGIS/gaia",
+  "sourceBranch": "codex/desktop-beta2",
+  "subject": "GAIA Atlas workspace with real public Census and USGS data",
+  "userData": false
+}

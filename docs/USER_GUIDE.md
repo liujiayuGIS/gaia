@@ -2,13 +2,13 @@
 
 **GAIA — Geospatial Artificial Intelligence Assistant · 地理空间人工智能助手盖亚**
 
-适用版本：桌面预览版 **0.5.0-beta.1** 及对应工作台。更新日期：2026-10-31。
+适用版本：桌面预览版 **0.5.0-beta.2** 及对应工作台。更新日期：2026-11-02。
 
 GAIA 把数据、地图、分析工具和自然语言助手放在同一工作区。你可以填写参数直接运行算法，也可以让助手检查数据、编排多步分析并生成地图。成果以独立数据和文件保存，方便复核与继续使用。
 
-**当前可下载安装 macOS Apple Silicon / Intel 版；Windows 版尚待完成安装包验收。** 本手册不把规划中的能力当作已交付功能。各版本状态见 [桌面版交付状态](DESKTOP_STATUS.md)。
+**各平台可下载的安装包以当前 Release 实际文件为准。** 本手册不把规划中的能力当作已交付功能。各版本状态见 [桌面版交付状态](DESKTOP_STATUS.md)。
 
-[下载安装包](https://github.com/liujiayuGIS/gaia/releases) · [桌面源码](https://github.com/liujiayuGIS/gaia/tree/codex/desktop-v05) · [安装与构建说明](DESKTOP.md)
+[下载安装包](https://github.com/liujiayuGIS/gaia/releases) · [桌面源码](https://github.com/liujiayuGIS/gaia/tree/codex/desktop-beta2) · [安装与构建说明](DESKTOP.md)
 
 ## 目录
 
@@ -38,9 +38,8 @@ GAIA 把数据、地图、分析工具和自然语言助手放在同一工作区
 
 | 你的设备 | 安装包 | 当前状态 |
 | --- | --- | --- |
-| M 系列 Mac | `GAIA-0.5.0-beta.1-mac-arm64.dmg` | 已发布，macOS 15 或更新 |
-| Intel Mac | `GAIA-0.5.0-beta.1-mac-x64.dmg` | 已发布，macOS 15 或更新 |
-| Windows 10/11 x64 | 后续提供 `.exe` 安装向导 | 源码已上传，安装包待验收 |
+| M 系列 Mac | `GAIA-0.5.0-beta.2-mac-arm64.dmg` | macOS 15 或更新；以 Release 实际文件为准 |
+| Windows 10/11 x64 | `GAIA-0.5.0-beta.2-win-x64.exe` | 原生构建与安装验收后发布，以 Release 实际文件为准 |
 
 在 Mac 的“关于本机”查看芯片或处理器。仓库目前为私有，下载时需要登录具有访问权限的 GitHub 账号；看到 404 时先检查账号权限。
 
@@ -54,10 +53,10 @@ GAIA 把数据、地图、分析工具和自然语言助手放在同一工作区
 当前测试版尚无 Apple Developer ID 与公证，系统可能提示未知开发者。确认来源和 SHA-256 后，可使用系统对单个应用提供的允许打开入口；不要关闭系统整体安全保护。发布页附带校验文件，例如在下载目录执行：
 
 ```bash
-shasum -a 256 -c GAIA-0.5.0-beta.1-mac-arm64.dmg.sha256
+shasum -a 256 -c GAIA-0.5.0-beta.2-mac-arm64.dmg.sha256
 ```
 
-Intel 用户把命令中的文件名换成对应的 `mac-x64` 文件。只有校验成功再继续使用。
+Windows 用户使用对应的 `.exe.sha256` 文件核对。只有校验成功再继续使用。
 
 <a id="quickstart"></a>
 ## 2. 十分钟完成第一张地图
@@ -256,7 +255,7 @@ QGIS 工具的距离参数通常遵循其算法及输入 CRS；经纬度图层�
 
 “需要检查成果”表示结果未达到当前验收要求。即使地图已出现，也应先阅读报告。严格验收不是“更聪明的模型”，也不能补足缺失的路网、数据时间或人口口径。
 
-人口密度积分的面积权重、复杂路网吸附与转向限制等仍需专门方法；相关限制详见 [空间质量说明](https://github.com/liujiayuGIS/gaia/blob/codex/desktop-v05/docs/SPATIAL_QUALITY.md)。
+人口密度积分的面积权重、复杂路网吸附与转向限制等仍需专门方法；相关限制详见 [空间质量说明](https://github.com/liujiayuGIS/gaia/blob/codex/desktop-beta2/docs/SPATIAL_QUALITY.md)。
 
 <a id="cartography"></a>
 ## 10. 编辑布局与专业出图
@@ -291,6 +290,32 @@ QGIS 工具的距离参数通常遵循其算法及输入 CRS；经纬度图层�
 来源说明写为“数据：我提供的设施清单；分析口径：800 米直线距离”。
 先生成预览并检查版面，指出需要我确认的地方。
 ```
+
+### 选择样式与字体（当前开发版）
+
+在 **出图布局** 的元素列表选择指北针、比例尺、图例或标题，即可在左侧“格式化元素”里改样式；选择纸面上的元素也会打开同一面板。
+
+| 元素 | 当前可选项 |
+| --- | --- |
+| 指北针 | 经典箭头、双色三角、罗盘玫瑰、极简线形，以及颜色；方向关联主地图真北 |
+| 比例尺 | 单线框、双线框、中线 / 上方 / 下方刻度、阶梯线、空心分段、数字比例；以本机 QGIS 实际目录为准；可改米 / 千米、分段数、字体、字号、字重、颜色 |
+| 高程与地形 | 在“页面”设置或图例属性中选择经典地形、柔和绿棕、蓝绿、Viridis、灰度色带；可反转颜色、开关山体阴影与等高线、设等高距及图例小数位 |
+| 文字 / 图例 | 从本机与随附字体目录选择；可逐元素设置字号、字重和颜色，文字支持斜体，图例支持列数 |
+| 全图默认字体 | 左侧“页面 → 地图字体”；自动模式优先选择本机中文字体，例如 macOS 的苹方、Windows 的微软雅黑或 Linux 上的 Noto / 思源字体 |
+| 界面字体 | 顶部“外观设置 → 界面字体”，可选系统现代、中文黑体或中文宋体，保存在当前浏览器，与地图字体独立 |
+
+这些高级选项使用 QGIS 原生渲染。预览、PDF / SVG / 位图导出、QGIS 工程和布局模板读取同一套设置。高程色带只改变打印地图的表现，不改变 DEM 像元值；切换比例尺单位保留实际地面距离。
+
+**自然语言示例**（已打开米制 DEM 的地形布局时）：
+
+```text
+指北针改成罗盘玫瑰，比例尺用双线框，单位米，分4段，高程改成蓝绿色带。
+标题用苹方，字号24，加粗。
+```
+
+离线模式支持上面这些明确的样式名称、位置、字体和导出指令；不会把未知样式报告成修改成功。字体必须在可用目录中，Windows 可将“苹方”换成实际目录中的字体。安装包随附 Noto Sans CJK SC 常规与粗体，在离屏环境中也可使用；不会把字体安装进系统。自由描述、复杂的组合排版和自定义元素需要连接模型；助手可先读取 `get_layout_styles` 及 `get_layout`，再通过 `update_layout_element` 合并修改一个元素，保留其他元素和已拖动的位置。
+
+更改造型、字体后等待页面更新，再检查实际导出的文件。新增指北针目前提供四款内置造型；普通图片仍可通过图片元素上传。尚未完整开放 QGIS 所有排版属性，也没有自动安装缺失字体。
 
 ### 检查与美化
 
@@ -459,7 +484,7 @@ metrics = {'feature_count': len(result)}
 | 内容 | 保存位置 / 方式 |
 | --- | --- |
 | macOS 工作区 | `~/Library/Application Support/GAIA/workspace` |
-| Windows 工作区（待发布版本） | `%APPDATA%\GAIA\workspace` |
+| Windows 工作区 | `%APPDATA%\GAIA\workspace` |
 | 会话、检查点、成果、知识 | 工作区中的数据库及文件 |
 | 界面主题、模型非密钥设置 | 桌面用户数据中的界面存储 |
 | 页面填写的 API Key | 仅当前页面内存 |
@@ -505,7 +530,7 @@ metrics = {'feature_count': len(result)}
 | 文字显示方框或布局截断 | 检查字体支持、文本框尺寸和字号；重导实际 PDF 核对，不只看缩略图 |
 | 重启后密钥为空 | 设计如此，重新填写。模型名称、主题等非密钥设置可保留 |
 | 没有“从检查点继续” | 可能是旧版无检查点任务，或该任务不可恢复；保留记录后按提示新建任务 |
-| 想用 Windows 版 | 当前未发布安装包，待 Actions 额度恢复后继续原生验收；不要把 macOS 包用于 Windows |
+| 想用 Windows 版 | 下载同一 Release 中的 `win-x64.exe`；若未列出该文件，说明该版 Windows 验收尚未完成；不要使用 macOS 包 |
 
 <a id="limits"></a>
 ## 18. 能力边界与问题反馈
@@ -516,4 +541,4 @@ metrics = {'feature_count': len(result)}
 
 反馈问题时，请在 [GitHub Issues](https://github.com/liujiayuGIS/gaia/issues) 提供：应用版本、系统与芯片、复现步骤、预期与实际结果、完整错误文字、相关任务的运行 / 核验记录；数据问题附一个可公开分享的最小样本和 CRS / 单位说明。不要提交 API Key 或受限数据。
 
-进一步阅读：[桌面安装与构建](DESKTOP.md)、[能力与格式](CAPABILITIES.md)、[真实数据制图](PROFESSIONAL_MAPS.md)、[插件与 Skills](https://github.com/liujiayuGIS/gaia/blob/codex/desktop-v05/docs/PLUGINS_AND_SKILLS.md)、[Harness 与记忆](https://github.com/liujiayuGIS/gaia/blob/codex/desktop-v05/docs/HARNESS_V04.md)。
+进一步阅读：[桌面安装与构建](DESKTOP.md)、[能力与格式](CAPABILITIES.md)、[真实数据制图](PROFESSIONAL_MAPS.md)、[插件与 Skills](https://github.com/liujiayuGIS/gaia/blob/codex/desktop-beta2/docs/PLUGINS_AND_SKILLS.md)、[Harness 与记忆](https://github.com/liujiayuGIS/gaia/blob/codex/desktop-beta2/docs/HARNESS_V04.md)。
