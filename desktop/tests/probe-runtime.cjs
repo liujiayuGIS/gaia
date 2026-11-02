@@ -13,6 +13,8 @@ const runtime=require('../runtime.cjs');
   const code="import json\nfrom geoagent.plugins.qgis_plugin import QGISPlugin\nr=QGISPlugin().status()\nprint('RELOCATED_QGIS:'+json.dumps(r),flush=True)\nassert r['available'],r\n";
   await runtime.run(runtime.executable(prefix),['-c',code],{env,cwd:root,log:console.log});
   console.log('Relocated QGIS registry ready without Electron');
+  fs.rmSync(path.join(userData,'cache/qgis-catalog.json'),{force:true});
+  console.log('Cleared probe catalog so Electron verifies a fresh GIS startup');
  }catch(error){
   const jobs=path.join(userData,'cache/jobs');
   if(fs.existsSync(jobs))for(const job of fs.readdirSync(jobs)){

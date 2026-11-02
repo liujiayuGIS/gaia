@@ -92,7 +92,9 @@ def execute(python, worker, request, job, cancel=None, timeout=120, restricted=T
             from .windows_sandbox import launch
             process=launch(command,job,env,stdout,stderr,[prefix,CODE],timeout)
             sandbox='Windows AppContainer: no network, job and private container writes only'
-        else:process=subprocess.Popen(command,cwd=job,env=env,stdout=stdout,stderr=stderr,start_new_session=sys.platform!='win32')
+        else:process=subprocess.Popen(command,cwd=job,env=env,stdin=subprocess.DEVNULL,stdout=stdout,stderr=stderr,
+                                      start_new_session=sys.platform!='win32',
+                                      creationflags=subprocess.CREATE_NO_WINDOW if sys.platform=='win32' else 0)
         start=time.monotonic()
         try:
             while process.poll() is None:

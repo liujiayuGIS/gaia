@@ -87,3 +87,21 @@ def test_module_worker_mime_ignores_host_file_association(tmp_path):
         response=client.get('/assets/'+workers[0].name)
         assert response.status_code==200
         assert response.headers['content-type'].startswith('text/javascript')
+
+
+def test_background_worker_does_not_inherit_open_parent_input(tmp_path):
+    import subprocess,sys
+    from geoagent.app import ROOT
+    worker=tmp_path/'read_input.py'
+    worker.write_text("import sys,json\nprint('GEOAGENT_RESULT:'+json.dumps({'ok':True,'data':{'input':sys.stdin.read()}}),flush=True)\n")
+    script=tmp_path/'parent.py'
+    script.write_text(f"from pathlib import Path\nfrom types import SimpleNamespace\nimport sys\nfrom geoagent.plugins import runtime\nruntime.CODE=Path({str(tmp_path)!r})\njob=runtime.job_folder(SimpleNamespace(root=Path({str(tmp_path)!r})))\nresult=runtime.execute(sys.executable,'read_input.py',{{}},job,timeout=4,restricted=False)\nassert result['input']==''\nprint('NO_INHERITED_INPUT',flush=True)\n")
+    child=subprocess.Popen([sys.executable,str(script)],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,
+                           env={**os.environ,'PYTHONPATH':str(ROOT/'backend')})
+    try:
+        child.wait(timeout=12)  # Keep the parent's input pipe open throughout.
+        assert child.returncode==0,child.stderr.read().decode(errors='replace')
+        assert b'NO_INHERITED_INPUT' in child.stdout.read()
+    finally:
+        if child.poll() is None:child.kill();child.wait()
+        child.stdin.close();child.stdout.close();child.stderr.close()
