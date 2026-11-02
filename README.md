@@ -1,10 +1,10 @@
-# GAIA · 桌面预览版 v0.5.0-beta.1
+# GAIA · 桌面预览版 v0.5.0-beta.2
 
 **Geospatial Artificial Intelligence Assistant · 地理空间人工智能助手盖亚**
 
 自然语言驱动的本地 GIS 工作台：导入矢量与栅格、执行空间分析、把结果发布为新图层，并按语言要求制作地图。
 
-当前分支包含 2026-11-02 的 **Atlas / Folio 界面升级**：地图上的浮动数据面板、独立助手、真实任务流程抽屉与原生出图工作区。操作和验证见 [新版工作台说明](docs/ATLAS_WORKSPACE.md)。GitHub 已发布的 macOS 安装包仍是此前的界面，尚未重新打包。
+当前分支包含 2026-11-02 的 **Atlas / Folio 界面升级**：地图上的浮动数据面板、独立助手、真实任务流程抽屉与原生出图工作区，已同步到 0.5.0-beta.2 桌面包。操作和验证见 [新版工作台说明](docs/ATLAS_WORKSPACE.md)，各平台安装验收记录见 [交付状态](docs/DESKTOP_STATUS.md)。
 
 ![GAIA workspace](screenshots/gaia-workspace.png)
 
@@ -14,7 +14,7 @@
 
 [GitHub Releases 下载安装包](https://github.com/liujiayuGIS/gaia/releases)：面向 macOS Apple Silicon（macOS 15+）和 Windows x64；各版本可下载的包以 Release 实际文件为准；见 [交付状态](docs/DESKTOP_STATUS.md)。内置 Python 和 QGIS，首次启动在本机初始化环境，工作区独立保存。
 
-**第一次使用请看 [GAIA 用户手册](docs/USER_GUIDE.md)**（[离线 HTML 版](https://github.com/liujiayuGIS/gaia/releases/download/desktop-v0.5.0-beta.1-6feef3e/GAIA-User-Guide-zh-CN.html)）：从十分钟完成第一张地图开始，逐步学习模型配置、SHP / TIFF 导入、算法参数、图层排序、布局编辑、出图导出、审批恢复、记忆与代码工具。系统要求、签名状态、源码构建见 [桌面版说明](docs/DESKTOP.md)。
+**第一次使用请看 [GAIA 用户手册](docs/USER_GUIDE.md)**（[离线 HTML 版](https://github.com/liujiayuGIS/gaia/releases/download/desktop-v0.5.0-beta.2-2c85c0d/GAIA-User-Guide-zh-CN.html)）：从十分钟完成第一张地图开始，逐步学习模型配置、SHP / TIFF 导入、算法参数、图层排序、布局编辑、出图导出、审批恢复、记忆与代码工具。系统要求、签名状态、源码构建见 [桌面版说明](docs/DESKTOP.md)。
 
 ## 从源码启动
 
@@ -33,7 +33,7 @@ cd ..
 打开 [本地工作台](http://127.0.0.1:8765)。已有依赖可直接运行 `./start.sh`。
 应用只监听本机回环地址；工作区默认保存在 `.geoagent/`，不进入 Git。
 可通过 `GEOAGENT_WORKSPACE` 指定独立工作区，通过 `PORT` 修改端口。
-Linux 中文制图需要安装 Noto CJK 字体；macOS 自动使用 Arial Unicode。
+制图随附 Noto Sans CJK SC 中文字体，也可从实际字体目录选择系统已安装字体。
 
 ## 可以验收什么
 
