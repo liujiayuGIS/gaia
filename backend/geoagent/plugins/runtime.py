@@ -97,7 +97,9 @@ def execute(python, worker, request, job, cancel=None, timeout=120, restricted=T
         try:
             while process.poll() is None:
                 if cancel and cancel.is_set():raise InterruptedError('任务已停止。')
-                if time.monotonic()-start>timeout:raise TimeoutError(f'执行超过 {timeout} 秒，已停止。')
+                if time.monotonic()-start>timeout:
+                    stages=[line for line in stderr_path.read_text(errors='replace').splitlines() if line.startswith('QGIS initializing ')]
+                    raise TimeoutError(f'执行超过 {timeout} 秒，已停止。'+(' 最后阶段：'+stages[-1] if stages else ''))
                 if stdout_path.stat().st_size+stderr_path.stat().st_size>2*1024*1024:
                     raise ValueError('执行日志超过2MB，已停止。')
                 time.sleep(.1)

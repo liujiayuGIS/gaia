@@ -151,12 +151,15 @@ if __name__=='__main__':
                 print('QGIS initializing '+name,file=sys.stderr,flush=True)
                 initialize()
         stage='QGIS initQgis (authentication/network)'
+        print('QGIS initializing initQgis',file=sys.stderr,flush=True)
         app.initQgis()
         stage='QGIS print fonts'
         from qgis_cartography import register_print_fonts
+        print('QGIS initializing print fonts',file=sys.stderr,flush=True)
         register_print_fonts()
         stage='QGIS processing'
         from processing.core.Processing import Processing
+        print('QGIS initializing processing',file=sys.stderr,flush=True)
         Processing.initialize()
         result={'ok':True,'data':run(request,app)}
     except Exception as exc:result={'ok':False,'error':stage+': '+str(exc),'traceback':traceback.format_exc(limit=8)}

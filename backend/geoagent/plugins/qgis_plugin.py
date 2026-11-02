@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import shutil
 import threading
+import time
 import uuid
 from .base import AnalysisPlugin
 from . import runtime
@@ -11,16 +12,18 @@ from . import runtime
 _LOCK=threading.Lock()
 _CATALOG=None
 _STYLE_OPTIONS=None
+_CATALOG_FAILURE=None
 
 
 class QGISPlugin(AnalysisPlugin):
     id='qgis';name='QGIS / PyQGIS'
 
     def catalog(self):
-        global _CATALOG
+        global _CATALOG,_CATALOG_FAILURE
         if _CATALOG is not None:return _CATALOG
         with _LOCK:
             if _CATALOG is not None:return _CATALOG
+            if _CATALOG_FAILURE and time.monotonic()-_CATALOG_FAILURE[0]<15:raise ValueError(_CATALOG_FAILURE[1])
             python=runtime.qgis_python()
             if not python:raise ValueError('QGIS 插件尚未配置运行环境。')
             cache=runtime.cache_root()/'qgis-catalog.json'
@@ -29,7 +32,10 @@ class QGISPlugin(AnalysisPlugin):
             from types import SimpleNamespace
             root=runtime.cache_root();root.mkdir(parents=True,exist_ok=True)
             job=runtime.job_folder(SimpleNamespace(root=root))
-            _CATALOG=runtime.execute(python,'qgis_worker.py',{'operation':'catalog'},job,timeout=90,restricted=False)
+            try:_CATALOG=runtime.execute(python,'qgis_worker.py',{'operation':'catalog'},job,timeout=90,restricted=False)
+            except Exception as error:
+                _CATALOG_FAILURE=(time.monotonic(),str(error));raise
+            _CATALOG_FAILURE=None
             cache.write_text(json.dumps(_CATALOG,ensure_ascii=False));return _CATALOG
 
     def status(self):

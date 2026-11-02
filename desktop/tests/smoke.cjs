@@ -105,6 +105,13 @@ const {_electron:electron}=require('playwright');const path=require('node:path')
   console.log(JSON.stringify(report));
  }catch(error){
   const qa=path.resolve(__dirname,'../../.desktop-build/qa');fs.mkdirSync(qa,{recursive:true});
+  for(const kind of ['cache','workspace']){
+   const jobs=path.join(userData,kind,'jobs');
+   if(fs.existsSync(jobs))for(const job of fs.readdirSync(jobs)){
+    const destination=path.join(qa,'desktop-'+kind+'-jobs',job);fs.mkdirSync(destination,{recursive:true});
+    for(const file of ['stderr.log','stdout.log','request.json']){const source=path.join(jobs,job,file);if(fs.existsSync(source))fs.copyFileSync(source,path.join(destination,file))}
+   }
+  }
   for(const file of ['desktop.log','desktop.log.previous']){const source=path.join(userData,'logs',file);if(fs.existsSync(source))fs.copyFileSync(source,path.join(qa,file))}
   const page=app.windows()[0];if(page)await page.screenshot({path:path.join(qa,'failure.png')}).catch(()=>{});
   throw error;
