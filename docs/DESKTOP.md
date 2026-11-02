@@ -11,7 +11,6 @@
 |系统|安装包|要求|
 |---|---|---|
 |macOS Apple Silicon|GAIA-版本-mac-arm64.dmg|macOS 15 或更新；M 系列处理器|
-|macOS Intel|GAIA-版本-mac-x64.dmg|macOS 15 或更新；Intel 处理器|
 |Windows x64|GAIA-版本-win-x64.exe（以该 Release 实际文件为准）|Windows 10/11 64 位；x64 处理器|
 
 macOS 打开 DMG 并将 GAIA 拖入 Applications。Windows 安装向导默认安装到当前用户目录，无需管理员权限。首次启动会校验并解压 GIS 运行时，可能需要几分钟和数 GB 磁盘空间；之后直接启动。首次初始化不需要额外下载 GIS 环境。
@@ -40,7 +39,7 @@ macOS 打开 DMG 并将 GAIA 拖入 Applications。Windows 安装向导默认安
 
 程序、安装盘和快捷方式统一使用 GAIA 名称与用户提供的盖亚标志。安装包包含当前用户手册，可从“帮助 → 打开本地用户手册”读取。
 
-三种包必须分别在目标 OS/架构构建。仓库的 `.github/workflows/desktop.yml` 在 macOS ARM64、macOS x64 和 Windows x64 上构建与验收。所选平台全部成功后提供带校验和的预发布安装包；失败时草稿不会自动发布。手动触发时可用 target 选择 all、windows 或 macos，方便补齐某个平台。
+只提供 macOS Apple Silicon（arm64）和 Windows x64 两种安装包；已移除 Intel Mac 构建。仓库的 `.github/workflows/desktop.yml` 在对应平台上构建与验收。所选平台全部成功后提供带校验和的预发布安装包；失败时草稿不会自动发布。手动触发时可用 target 选择 all、windows 或 macos，方便补齐某个平台。
 
 本机构建需要 Node.js 24、micromamba 和 Python。先安装前端、桌面依赖，然后生成包含全部 GIS 依赖的运行时：
 

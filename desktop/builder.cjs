@@ -15,7 +15,7 @@ module.exports={
   {from:'../frontend/public/gaia-icon.png',to:'gaia-icon.png'}
  ],
  artifactName:'GAIA-${version}-${os}-${arch}.${ext}',
- mac:{target:['dmg'],category:'public.app-category.education',icon:'../.desktop-build/icons/icon.icns',
+ mac:{target:[{target:'dmg',arch:['arm64']}],category:'public.app-category.education',icon:'../.desktop-build/icons/icon.icns',
       minimumSystemVersion:'15.0',identity:'-',hardenedRuntime:false},
  dmg:{title:'GAIA',icon:'../.desktop-build/icons/icon.icns',format:'ULFO',contents:[{x:150,y:180},{x:410,y:180,type:'link',path:'/Applications'}]},
  win:{target:['nsis'],icon:'../.desktop-build/icons/icon.ico',signAndEditExecutable:true},

@@ -38,9 +38,8 @@ GAIA 把数据、地图、分析工具和自然语言助手放在同一工作区
 
 | 你的设备 | 安装包 | 当前状态 |
 | --- | --- | --- |
-| M 系列 Mac | `GAIA-0.5.0-beta.1-mac-arm64.dmg` | 已发布，macOS 15 或更新 |
-| Intel Mac | `GAIA-0.5.0-beta.1-mac-x64.dmg` | 已发布，macOS 15 或更新 |
-| Windows 10/11 x64 | 后续提供 `.exe` 安装向导 | 源码已上传，安装包待验收 |
+| M 系列 Mac | `GAIA-0.5.0-beta.2-mac-arm64.dmg` | macOS 15 或更新；以 Release 实际文件为准 |
+| Windows 10/11 x64 | `GAIA-0.5.0-beta.2-win-x64.exe` | 原生构建与安装验收后发布，以 Release 实际文件为准 |
 
 在 Mac 的“关于本机”查看芯片或处理器。仓库目前为私有，下载时需要登录具有访问权限的 GitHub 账号；看到 404 时先检查账号权限。
 
@@ -54,10 +53,10 @@ GAIA 把数据、地图、分析工具和自然语言助手放在同一工作区
 当前测试版尚无 Apple Developer ID 与公证，系统可能提示未知开发者。确认来源和 SHA-256 后，可使用系统对单个应用提供的允许打开入口；不要关闭系统整体安全保护。发布页附带校验文件，例如在下载目录执行：
 
 ```bash
-shasum -a 256 -c GAIA-0.5.0-beta.1-mac-arm64.dmg.sha256
+shasum -a 256 -c GAIA-0.5.0-beta.2-mac-arm64.dmg.sha256
 ```
 
-Intel 用户把命令中的文件名换成对应的 `mac-x64` 文件。只有校验成功再继续使用。
+Windows 用户使用对应的 `.exe.sha256` 文件核对。只有校验成功再继续使用。
 
 <a id="quickstart"></a>
 ## 2. 十分钟完成第一张地图
@@ -485,7 +484,7 @@ metrics = {'feature_count': len(result)}
 | 内容 | 保存位置 / 方式 |
 | --- | --- |
 | macOS 工作区 | `~/Library/Application Support/GAIA/workspace` |
-| Windows 工作区（待发布版本） | `%APPDATA%\GAIA\workspace` |
+| Windows 工作区 | `%APPDATA%\GAIA\workspace` |
 | 会话、检查点、成果、知识 | 工作区中的数据库及文件 |
 | 界面主题、模型非密钥设置 | 桌面用户数据中的界面存储 |
 | 页面填写的 API Key | 仅当前页面内存 |
@@ -531,7 +530,7 @@ metrics = {'feature_count': len(result)}
 | 文字显示方框或布局截断 | 检查字体支持、文本框尺寸和字号；重导实际 PDF 核对，不只看缩略图 |
 | 重启后密钥为空 | 设计如此，重新填写。模型名称、主题等非密钥设置可保留 |
 | 没有“从检查点继续” | 可能是旧版无检查点任务，或该任务不可恢复；保留记录后按提示新建任务 |
-| 想用 Windows 版 | 当前未发布安装包，待 Actions 额度恢复后继续原生验收；不要把 macOS 包用于 Windows |
+| 想用 Windows 版 | 下载同一 Release 中的 `win-x64.exe`；若未列出该文件，说明该版 Windows 验收尚未完成；不要使用 macOS 包 |
 
 <a id="limits"></a>
 ## 18. 能力边界与问题反馈

@@ -33,7 +33,7 @@ jobs:
           VERSION=$(node -p "require('./desktop/package.json').version")
           TAG="desktop-v$VERSION-${GITHUB_SHA:0:7}"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          node -e 'const rows=[{runner:"macos-15",arch:"arm64",flag:"--mac --arm64"},{runner:"macos-15-intel",arch:"x64",flag:"--mac --x64"},{runner:"windows-2022",arch:"x64",flag:"--win --x64"}];const target=process.env.TARGET;console.log("matrix="+JSON.stringify({include:rows.filter(r=>target==="all"||(target==="windows"?r.runner.startsWith("windows"):r.runner.startsWith("macos")))}))' >> "$GITHUB_OUTPUT"
+          node -e 'const rows=[{runner:"macos-15",arch:"arm64",flag:"--mac --arm64"},{runner:"windows-2022",arch:"x64",flag:"--win --x64"}];const target=process.env.TARGET;console.log("matrix="+JSON.stringify({include:rows.filter(r=>target==="all"||(target==="windows"?r.runner.startsWith("windows"):r.runner.startsWith("macos")))}))' >> "$GITHUB_OUTPUT"
           gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --draft --prerelease --target "$GITHUB_SHA" --title "GAIA $VERSION · 桌面预览版" --notes-file docs/releases/0.5.0-beta.2.md
   build:
     needs: release
@@ -90,15 +90,13 @@ jobs:
       - name: Packaged application launch and persistence
         run: |
           export GAIA_SMOKE_DATA_DIR="$(cat .desktop-build/qa/smoke-user-data.txt)"
-          export GAIA_PACKAGED_EXECUTABLE="$PWD/.desktop-build/installers/mac/GAIA.app/Contents/MacOS/GAIA"
-          if [ "${{ matrix.arch }}" = arm64 ]; then export GAIA_PACKAGED_EXECUTABLE="$PWD/.desktop-build/installers/mac-arm64/GAIA.app/Contents/MacOS/GAIA"; fi
+          export GAIA_PACKAGED_EXECUTABLE="$PWD/.desktop-build/installers/mac-arm64/GAIA.app/Contents/MacOS/GAIA"
           if [ "$RUNNER_OS" = Windows ]; then export GAIA_PACKAGED_EXECUTABLE="$PWD/.desktop-build/installers/win-unpacked/GAIA.exe"; fi
           npm --prefix desktop run smoke
       - name: Verify macOS bundle signature after use
         if: runner.os == 'macOS'
         run: |
-          APP=.desktop-build/installers/mac/GAIA.app
-          if [ "${{ matrix.arch }}" = arm64 ]; then APP=.desktop-build/installers/mac-arm64/GAIA.app; fi
+          APP=.desktop-build/installers/mac-arm64/GAIA.app
           codesign --verify --deep --strict "$APP"
           node desktop/tests/branding-mac.cjs "$APP" "${{ matrix.arch }}"
       - name: Install Windows package and launch installed app

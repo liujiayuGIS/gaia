@@ -12,7 +12,7 @@
 
 ## 桌面安装
 
-[GitHub Releases 下载安装包](https://github.com/liujiayuGIS/gaia/releases)：目前提供 macOS Apple Silicon / Intel 预览版（macOS 15+）。Windows x64 源码已上传，安装包待原生验收；见 [交付状态](docs/DESKTOP_STATUS.md)。内置 Python 和 QGIS，首次启动在本机初始化环境，工作区独立保存。
+[GitHub Releases 下载安装包](https://github.com/liujiayuGIS/gaia/releases)：面向 macOS Apple Silicon（macOS 15+）和 Windows x64；各版本可下载的包以 Release 实际文件为准；见 [交付状态](docs/DESKTOP_STATUS.md)。内置 Python 和 QGIS，首次启动在本机初始化环境，工作区独立保存。
 
 **第一次使用请看 [GAIA 用户手册](docs/USER_GUIDE.md)**（[离线 HTML 版](https://github.com/liujiayuGIS/gaia/releases/download/desktop-v0.5.0-beta.1-6feef3e/GAIA-User-Guide-zh-CN.html)）：从十分钟完成第一张地图开始，逐步学习模型配置、SHP / TIFF 导入、算法参数、图层排序、布局编辑、出图导出、审批恢复、记忆与代码工具。系统要求、签名状态、源码构建见 [桌面版说明](docs/DESKTOP.md)。
 
