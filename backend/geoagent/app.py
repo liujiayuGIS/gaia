@@ -2,6 +2,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+import mimetypes
 import os
 import threading
 from .process_utils import WorkspaceLease
@@ -94,6 +95,8 @@ class MapPolishRequest(BaseModel):
 
 
 def create_app(workspace=None):
+    # Windows file associations can override Python's JavaScript module MIME.
+    mimetypes.add_type('text/javascript','.mjs')
     app=FastAPI(title='GAIA Local',version='0.4.0')
     app.add_middleware(TrustedHostMiddleware,allowed_hosts=['127.0.0.1','localhost','testserver','[::1]'])
     store=Store(workspace or os.environ.get('GEOAGENT_WORKSPACE',ROOT/'.geoagent'))

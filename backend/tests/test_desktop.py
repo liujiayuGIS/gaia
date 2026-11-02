@@ -75,3 +75,15 @@ outputs['test']=str(p)
     assert (store.root/saved['path']).stat().st_size>0
     reopened=qgis.open_project(store,saved['id'])
     assert len(reopened['layers'])==2
+
+
+def test_module_worker_mime_ignores_host_file_association(tmp_path):
+    import mimetypes
+    from geoagent.app import ROOT
+    workers=list((ROOT/'frontend/dist/assets').glob('*.mjs'))
+    if not workers:pytest.skip('Frontend build required')
+    mimetypes.add_type('application/octet-stream','.mjs')
+    with TestClient(create_app(tmp_path/'workspace')) as client:
+        response=client.get('/assets/'+workers[0].name)
+        assert response.status_code==200
+        assert response.headers['content-type'].startswith('text/javascript')

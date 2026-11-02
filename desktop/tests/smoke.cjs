@@ -11,10 +11,10 @@ const {_electron:electron}=require('playwright');const path=require('node:path')
  const watchdog=setTimeout(()=>{console.error('Desktop smoke exceeded 15 minutes');app.process().kill('SIGKILL')},900000);
  watchdog.unref();
  try{
-  let page=await app.firstWindow();page.setDefaultTimeout(600000);
+  let page=await app.firstWindow();page.setDefaultTimeout(60000);
   const errors=[];page.on('pageerror',e=>{errors.push(e.message);console.error(e.message)});
   page.on('console',e=>{if(e.type()==='error')console.error('Renderer: '+e.text())});
-  await ready(page);await page.getByRole('button',{name:'数据面板',exact:true}).waitFor();
+  await ready(page);await page.locator('.atlas-workbench').waitFor();
   console.log('Desktop workbench ready');
   assert.equal(await page.evaluate(()=>typeof require),'undefined');
   const result=await page.evaluate(async()=>{
@@ -77,8 +77,10 @@ const {_electron:electron}=require('playwright');const path=require('node:path')
   const renderer=await page.locator('.map-canvas').getAttribute('data-renderer');
   if(process.env.GAIA_SMOKE_NO_GPU==='1')assert.equal(renderer,'leaflet');
   console.log('Interactive map ready: '+renderer);
-  await page.getByRole('button',{name:'出图布局',exact:true}).click();
+  const narrow=await page.locator('.mobile-navigation').isVisible();
+  await page.getByRole('button',{name:narrow?'布局':'出图布局',exact:true}).click();
   await page.waitForSelector('.layout-page .layout-item',{timeout:120000});
+  if(narrow)await page.getByRole('button',{name:'数据与工具',exact:true}).click();
   await page.locator('.contents-tree').getByRole('button',{name:'指北针',exact:true}).click();
   await page.getByRole('button',{name:'指北针 极简线形',exact:true}).click();
   await page.evaluate(async()=>{const deadline=Date.now()+30000;while(Date.now()<deadline){const r=await fetch('/api/layout');if(!r.ok)throw new Error(await r.text());const c=await r.json();if(c.items.north_arrow?.north_style==='minimal')return;await new Promise(resolve=>setTimeout(resolve,150))}throw new Error('Manual north style was not persisted')});
