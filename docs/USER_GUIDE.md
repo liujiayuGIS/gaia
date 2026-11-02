@@ -41,7 +41,7 @@ GAIA 把数据、地图、分析工具和自然语言助手放在同一工作区
 | M 系列 Mac | `GAIA-0.5.0-beta.2-mac-arm64.dmg` | macOS 15 或更新；以 Release 实际文件为准 |
 | Windows 10/11 x64 | `GAIA-0.5.0-beta.2-win-x64.exe` | 原生构建与安装验收后发布，以 Release 实际文件为准 |
 
-在 Mac 的“关于本机”查看芯片或处理器。仓库目前为私有，下载时需要登录具有访问权限的 GitHub 账号；看到 404 时先检查账号权限。
+在 Mac 的“关于本机”查看芯片或处理器。仓库已公开，安装包可直接下载，无需登录 GitHub。公开访问不授予仓库写权限。
 
 1. 从 [Releases](https://github.com/liujiayuGIS/gaia/releases) 下载对应 DMG。
 2. 打开 DMG，把 GAIA 拖入“应用程序”。
@@ -511,7 +511,7 @@ metrics = {'feature_count': len(result)}
 
 | 现象 | 先检查什么 / 如何处理 |
 | --- | --- |
-| GitHub 下载显示 404 | 仓库是私有；登录有权限的账号，从新的 `liujiayuGIS/gaia` 发布页下载 |
+| GitHub 下载显示 404 | 使用当前 `liujiayuGIS/gaia` 发布页，核对版本与文件名；仓库已公开，无需登录 |
 | 首次启动停留在准备环境 | 等待当前解压；确认磁盘空间。失败时从“帮助”打开日志，保留报错再重试，不删除工作区 |
 | macOS 提示未知开发者 | 当前测试版没有 Apple 公证；核对来源与校验值，只使用系统对单个可信应用的允许入口 |
 | `Failed to fetch` | 分清是本地服务还是模型连接：查看启动日志，确认工作台能读图层，再在模型设置测试连接 |
