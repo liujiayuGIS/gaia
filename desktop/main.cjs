@@ -66,6 +66,7 @@ if(!app.requestSingleInstanceLock())app.quit();
 else{
  app.on('second-instance',()=>{if(window){if(window.isMinimized())window.restore();window.focus()}});
  app.whenReady().then(async()=>{
+  if(process.platform==='darwin')app.dock.setIcon(app.isPackaged?path.join(resources,'gaia-icon.png'):path.join(serverRoot,'frontend/public/gaia-icon.png'));
   workspace=path.join(app.getPath('userData'),'workspace');logs=path.join(app.getPath('userData'),'logs');
   await fsp.mkdir(logs,{recursive:true});await fsp.mkdir(workspace,{recursive:true});
   const logfile=path.join(logs,'desktop.log');

@@ -26,6 +26,7 @@ const {_electron:electron}=require('playwright');const path=require('node:path')
   });
   assert(await page.locator('.atlas-workbench').count(),'Latest Atlas/Folio UI must be bundled');
   assert.equal(await app.evaluate(({app})=>app.getVersion()),require('../package.json').version);
+  assert.equal(await app.evaluate(({app})=>app.getName()),'GAIA');
   assert(result.qgis?.available,JSON.stringify(result.qgis));
   assert(result.health.ok);assert.equal(result.demo,200);assert(result.count>0);
   console.log('Local API and QGIS ready');
@@ -80,7 +81,7 @@ const {_electron:electron}=require('playwright');const path=require('node:path')
   await page.waitForSelector('.layout-page .layout-item',{timeout:120000});
   await page.locator('.contents-tree').getByRole('button',{name:'指北针',exact:true}).click();
   await page.getByRole('button',{name:'指北针 极简线形',exact:true}).click();
-  await page.waitForFunction(async()=>{const r=await fetch('/api/layout');const c=await r.json();return c.items.north_arrow?.north_style==='minimal'},null,{timeout:30000});
+  await page.evaluate(async()=>{const deadline=Date.now()+30000;while(Date.now()<deadline){const r=await fetch('/api/layout');if(!r.ok)throw new Error(await r.text());const c=await r.json();if(c.items.north_arrow?.north_style==='minimal')return;await new Promise(resolve=>setTimeout(resolve,150))}throw new Error('Manual north style was not persisted')});
   const manual=await page.evaluate(async()=>{const r=await fetch('/api/layout/scene');const scene=await r.json();return scene.elements.find(e=>e.id==='north_arrow').north_style});
   assert.equal(manual,'minimal');
   await page.getByRole('button',{name:'外观设置',exact:true}).click();
