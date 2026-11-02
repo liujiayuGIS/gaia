@@ -16,6 +16,7 @@ if sys.platform=='win32':
 sys.path.insert(0,str(PREFIX/'share/qgis/python'))
 sys.path.insert(0,str(PREFIX/'share/qgis/python/plugins'))
 sys.path.insert(0,str(Path(__file__).parent))
+print('QGIS initializing module import',file=sys.stderr,flush=True)
 from qgis.core import *
 from qgis.PyQt.QtCore import QVariant
 
@@ -140,6 +141,7 @@ if __name__=='__main__':
         QSettings.setPath(QSettings.IniFormat,QSettings.UserScope,config)
         os.environ['QGIS_AUTH_DB_DIR_PATH']=config
     QgsApplication.setPrefixPath(str(PREFIX),True)
+    print('QGIS initializing application',file=sys.stderr,flush=True)
     app=QgsApplication([],False,config)
     stage='QGIS initialization'
     try:
