@@ -6,9 +6,9 @@
 
 GAIA 把数据、地图、分析工具和自然语言助手放在同一工作区。你可以填写参数直接运行算法，也可以让助手检查数据、编排多步分析并生成地图。成果以独立数据和文件保存，方便复核与继续使用。
 
-**当前可下载安装 macOS Apple Silicon / Intel 版；Windows 版尚待完成安装包验收。** 本手册不把规划中的能力当作已交付功能。各版本状态见 [桌面版交付状态](DESKTOP_STATUS.md)。
+**各平台可下载的安装包以当前 Release 实际文件为准。** 本手册不把规划中的能力当作已交付功能。各版本状态见 [桌面版交付状态](DESKTOP_STATUS.md)。
 
-[下载安装包](https://github.com/liujiayuGIS/gaia/releases) · [桌面源码](https://github.com/liujiayuGIS/gaia/tree/codex/desktop-v05) · [安装与构建说明](DESKTOP.md)
+[下载安装包](https://github.com/liujiayuGIS/gaia/releases) · [桌面源码](https://github.com/liujiayuGIS/gaia/tree/codex/desktop-beta2) · [安装与构建说明](DESKTOP.md)
 
 ## 目录
 
@@ -256,7 +256,7 @@ QGIS 工具的距离参数通常遵循其算法及输入 CRS；经纬度图层�
 
 “需要检查成果”表示结果未达到当前验收要求。即使地图已出现，也应先阅读报告。严格验收不是“更聪明的模型”，也不能补足缺失的路网、数据时间或人口口径。
 
-人口密度积分的面积权重、复杂路网吸附与转向限制等仍需专门方法；相关限制详见 [空间质量说明](https://github.com/liujiayuGIS/gaia/blob/codex/desktop-v05/docs/SPATIAL_QUALITY.md)。
+人口密度积分的面积权重、复杂路网吸附与转向限制等仍需专门方法；相关限制详见 [空间质量说明](https://github.com/liujiayuGIS/gaia/blob/codex/desktop-beta2/docs/SPATIAL_QUALITY.md)。
 
 <a id="cartography"></a>
 ## 10. 编辑布局与专业出图
@@ -542,4 +542,4 @@ metrics = {'feature_count': len(result)}
 
 反馈问题时，请在 [GitHub Issues](https://github.com/liujiayuGIS/gaia/issues) 提供：应用版本、系统与芯片、复现步骤、预期与实际结果、完整错误文字、相关任务的运行 / 核验记录；数据问题附一个可公开分享的最小样本和 CRS / 单位说明。不要提交 API Key 或受限数据。
 
-进一步阅读：[桌面安装与构建](DESKTOP.md)、[能力与格式](CAPABILITIES.md)、[真实数据制图](PROFESSIONAL_MAPS.md)、[插件与 Skills](https://github.com/liujiayuGIS/gaia/blob/codex/desktop-v05/docs/PLUGINS_AND_SKILLS.md)、[Harness 与记忆](https://github.com/liujiayuGIS/gaia/blob/codex/desktop-v05/docs/HARNESS_V04.md)。
+进一步阅读：[桌面安装与构建](DESKTOP.md)、[能力与格式](CAPABILITIES.md)、[真实数据制图](PROFESSIONAL_MAPS.md)、[插件与 Skills](https://github.com/liujiayuGIS/gaia/blob/codex/desktop-beta2/docs/PLUGINS_AND_SKILLS.md)、[Harness 与记忆](https://github.com/liujiayuGIS/gaia/blob/codex/desktop-beta2/docs/HARNESS_V04.md)。
