@@ -1,4 +1,4 @@
-import React,{useMemo,useState} from 'react';
+import React,{useEffect,useMemo,useState} from 'react';
 import {Search,ChevronLeft,Play,RotateCcw,Info,FolderOpen,ChevronRight} from 'lucide-react';
 
 import {post} from './shared';
@@ -14,7 +14,8 @@ export default function GeoprocessingPane({capabilities,layers,selected,running,
  const [context,setContext]=useState({}),[preflight,setPreflight]=useState(null),[checking,setChecking]=useState(false);
  const algorithms=capabilities?.algorithms||[];
  const filtered=useMemo(()=>algorithms.filter(a=>(provider==='all'||a.plugin_id===provider)&&(algorithmName(a)+a.id+a.category).toLowerCase().includes(query.toLowerCase())),[algorithms,provider,query]);
- function choose(a){setChosen(a);setContext({boundary:a.id.includes('countpointsinpolygon')?'contains':'covers'});setPreflight(null);setArgs(defaults(a,layers,selected));setOutput(a.name+' 结果');setError('');setTab('parameters')}
+ useEffect(()=>{if(!chosen)return;setContext({boundary:chosen.id.includes('countpointsinpolygon')?'contains':'covers'});setPreflight(null);setArgs(defaults(chosen,layers,selected));setOutput(chosen.name+' 结果');setError('');setTab('parameters')},[chosen?.id]);
+ function choose(a){setChosen(a)}
  function change(key,value){setPreflight(null);setArgs(old=>({...old,[key]:value}));setError('')}
  async function inspect(){setChecking(true);setError('');try{const value=await post('/analysis/preflight',{algorithm_id:chosen.id,arguments:args,context});setPreflight(value);if(!value.passed)setError(value.errors.join('；'));return value.passed}catch(e){setError(e.message);return false}finally{setChecking(false)}}
  async function execute(e){e.preventDefault();for(const [key,p] of Object.entries(chosen.parameters)){if(p.required&&(args[key]===undefined||args[key]===null||args[key]===''||(p.type==='layers'&&!args[key]?.length))){setError('请填写：'+p.label);return}}if(await inspect())run(chosen,args,output,context)}

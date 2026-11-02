@@ -4,6 +4,8 @@
 
 自然语言驱动的本地 GIS 工作台：导入矢量与栅格、执行空间分析、把结果发布为新图层，并按语言要求制作地图。
 
+当前分支包含 2026-11-02 的 **Atlas / Folio 界面升级**：地图上的浮动数据面板、独立助手、真实任务流程抽屉与原生出图工作区。操作和验证见 [新版工作台说明](docs/ATLAS_WORKSPACE.md)。GitHub 已发布的 macOS 安装包仍是此前的界面，尚未重新打包。
+
 ![GAIA workspace](screenshots/gaia-workspace.png)
 
 这是可运行的插件与原生 QGIS 验收实现。目标是逐步覆盖桌面 GIS 工作流；**目前还不等同于 QGIS / ArcGIS 全量能力，也没有经过与其他 Agent 的同条件性能评测。**

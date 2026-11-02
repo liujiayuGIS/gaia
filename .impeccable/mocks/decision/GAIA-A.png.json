@@ -1,0 +1,17 @@
+{
+  "concept": "A",
+  "title": "浮屿",
+  "approved": true,
+  "stage": "visual_concept_only",
+  "prompt": "Render one complete, exceptional high-fidelity desktop GIS application UI for GAIA, edge-to-edge wide 16:10, ideally 1920×1200. No device or marketing mockup. The user works on “滨江公共空间研究”: stations, parks, 800 m straight-line buffers, validation and map export. Display a small “设计预览 · 示意数据” note. Chinese interface text is crisp and readable. Use the reference ONLY as the small unchanged orbital-G app icon beside GAIA. A substantial independent RIGHT COLUMN titled “GAIA 助手” must show conversation, tool evidence, an artifact and a comfortable bottom composer “描述分析或制图要求…”. Include theme/color access. Professional real working screen, no KPI cards, vendor ribbon or oversized welcome hero.\nDirection A: 浮屿 / Atlas Air. MAP-FIRST, quiet architectural precision. A seamless, huge 2D city map extends behind a SMALL floating upper-left layer palette, rather than sitting in a boxed column. Finely drawn pale gray streets, broad muted aquamarine river, celadon parks, teal station dots and translucent thin 800 m buffer outlines. A few Chinese map labels, real scale and north indicator. Palette lists “站点 / 公园 / 800 米缓冲”. A short floating upper map action strip contains “添加数据 / 分析 / 布局”. A slim bottom contextual result tray connects “缓冲区 → 点计数 → 核验”, with “查看结果”. RIGHT assistant is a clean opaque white sheet with clear readable hierarchy, request “统计站点 800 米内的公园”, two completed tool steps and “导出 PDF” artifact. Tiny project bar across the top. Silver-white surfaces, deep petrol ink, restrained emerald action color, selective translucent toolbar material, continuous soft corners, excellent alignment and subtle true shadows. The distinctive move is cartography flowing behind a floating toolkit while the conversation remains anchored. More native tactile clarity than nested cards.",
+  "reference_image": "/Users/bytedance/.codex/visualizations/2026/10/30/01a18c35-1feb-7cd1-a601-18d101355379/geoagent-v1/frontend/public/gaia-icon.png",
+  "image": "/Users/bytedance/Documents/ChatGPT/开发/GAIA-design-2026-11-02/GAIA-A.png",
+  "product_code_modified": false,
+  "notes": [
+    "Generated map, quantities and task results are illustrative, not executed GIS analysis.",
+    "Use the supplied unchanged icon asset in any later implementation.",
+    "Selection and application implementation await the user's response."
+  ],
+  "selected_role": "Main map workspace",
+  "approval_text": "A 做主工作区，C 做出图模式。B 的流程抽屉融入 A。"
+}

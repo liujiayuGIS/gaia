@@ -29,6 +29,8 @@ The user named the app GAIA, Geospatial Artificial Intelligence Assistant, Âú∞Áê
 
 ## Product Principles
 
+On 2026-11-02 the user approved the Atlas/Folio redesign: A's floating map workspace, C's print-editing composition and B's expandable process drawer. This supersedes the permanent boxed left column. The right-hand assistant remains a distinct persistent surface, with adjustable themes/colors and the original supplied icon. Only real layer data, task receipts and QGIS scenes belong in the implementation; the generated concept maps are visual references.
+
 - Keep the map or document central; navigation and tools serve the current task.
 - Skills describe methods; plugins execute capabilities; the harness orchestrates and validates.
 - Manual editing and language commands update the same saved layout.

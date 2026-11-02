@@ -1,0 +1,39 @@
+{
+  "passed": true,
+  "toolSteps": 2,
+  "accentContrast": 5.219114634538137,
+  "checks": [
+    "floating-palette",
+    "command-search-to-native-parameters",
+    "real-QGIS-output",
+    "actual-event-drawer",
+    "drawer-panel-clearance",
+    "native-scene-thumbnail",
+    "PDF-download",
+    "custom-accent-contrast",
+    "theme-persistence",
+    "compact-desktop",
+    "mobile-export-and-panes"
+  ],
+  "errors": [],
+  "date": "2026-11-02T12:02:59.002337+08:00",
+  "source_fingerprint": "acc01d600a6b54d89480248a365430280626dcfddf2af211ac4015723d837ad9",
+  "fixture": "/private/tmp/gaia-atlas-final-qa; public Census county boundaries + USGS 3DEP DEM",
+  "screenshots": {
+    "map.png": "desktop.png",
+    "folio.png": "layout.png",
+    "process.png": "algorithm.png",
+    "dark.png": "dark.png",
+    "compact.png": "compact.png",
+    "mobile-folio.png": "mobile.png",
+    "mobile-assistant.png": "mobile-assistant.png",
+    "mobile-data.png": "mobile-pane.png"
+  },
+  "additional_checks": [
+    "4 process-event tests including nested workflows",
+    "existing real-QGIS layout drag/property/dialog checks passed",
+    "layer order mouse/keyboard/touch/cancellation/rollback checks passed"
+  ],
+  "review_method": "Rendered screenshots and finish review performed inline; Impeccable executable unavailable.",
+  "application_data": "User workspace not used for QA; original application started separately on 8765."
+}

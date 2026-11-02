@@ -1,0 +1,17 @@
+{
+  "concept": "C",
+  "title": "图志",
+  "approved": true,
+  "stage": "visual_concept_only",
+  "prompt": "Render one complete, exceptional high-fidelity desktop GIS application UI for GAIA, edge-to-edge wide 16:10, ideally 1920×1200. No device or marketing mockup. The user works on “滨江公共空间研究”: stations, parks, 800 m straight-line buffers, validation and map export. Display a small “设计预览 · 示意数据” note. Chinese interface text is crisp and readable. Use the reference ONLY as the small unchanged orbital-G app icon beside GAIA. A substantial independent RIGHT COLUMN titled “GAIA 助手” must show conversation, tool evidence, an artifact and a comfortable bottom composer “描述分析或制图要求…”. Include theme/color access. Professional real working screen, no KPI cards, vendor ribbon or oversized welcome hero.\nDirection C: 图志 / Map Folio. PUBLISHING-FIRST, a large beautifully authored white A4 landscape MAP PAGE dominates a cool pale gray-lilac pasteboard, thin millimetre rulers and quiet page shadow. “出图布局” tab active beside “地图”. On the page, professionally composed river-city cartography: blue-gray river, fine streets, teal parks, warm analysis zones, title “滨江公共空间”, subtitle “站点周边 800 米公园分布”; a right-side whitespace column holds an elegant legend, tiny locator map, meaningful scale and north arrow. Source note “示意数据 · 仅用于设计预览”. North arrow selected with subtle blue resize handles proves hand editing. LEFT sidebar has two document thumbnails “分析地图 / 地图版式” and semantic element outline “地图框 / 标题 / 图例 / 指北针 / 比例尺”, rather than A's layer stack. RIGHT independent assistant shows request “把图例放到右侧，检查标注遮挡”, a concise answer, “核验版面” button, “预览 PDF” artifact and comfortable composer. Narrow header offers “添加元素 / 对齐 / 撤销” and solid cobalt “导出”, never a ribbon. Precise humanist sans application typography; expressive typography only in the authored map title. Rounded native controls, graphite ink and restrained cobalt actions. Signature is gorgeous editable cartographic output with a designer's desk workflow.",
+  "reference_image": "/Users/bytedance/.codex/visualizations/2026/10/30/01a18c35-1feb-7cd1-a601-18d101355379/geoagent-v1/frontend/public/gaia-icon.png",
+  "image": "/Users/bytedance/Documents/ChatGPT/开发/GAIA-design-2026-11-02/GAIA-C.png",
+  "product_code_modified": false,
+  "notes": [
+    "Generated map, quantities and task results are illustrative, not executed GIS analysis.",
+    "Use the supplied unchanged icon asset in any later implementation.",
+    "Selection and application implementation await the user's response."
+  ],
+  "selected_role": "Print layout workspace",
+  "approval_text": "A 做主工作区，C 做出图模式。B 的流程抽屉融入 A。"
+}
