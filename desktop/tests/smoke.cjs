@@ -40,7 +40,7 @@ const {_electron:electron}=require('playwright');const path=require('node:path')
    if(run.status!=='completed')throw new Error(JSON.stringify(run));
    await json('/layout',{plugin_id:'qgis',title:'GAIA 桌面出图验证',focus_layer_id:run.output_layers[0],map_crs:'EPSG:32650',legend_position:'outside-right'},'PATCH');
    const styles=await (await fetch('/api/layout/styles')).json();
-   if(styles.north_styles?.length!==4||styles.terrain_palettes?.length!==5||!styles.fonts?.some(f=>f.family===styles.default_font))throw new Error('Latest style/font catalog missing');
+   if(!styles.default_cjk||!styles.fonts?.some(f=>f.bundled&&f.family==='Noto Sans CJK SC')||styles.north_styles?.length!==4||styles.terrain_palettes?.length!==5||!styles.fonts?.some(f=>f.family===styles.default_font))throw new Error('Latest style/font catalog missing');
    await json('/layout/items/title',{font_family:styles.default_font,font_weight:600,font_size:22},'PATCH');
    const styled=await json('/runs',{session_id:'desktop-smoke',mode:'offline',message:'指北针改成罗盘玫瑰，比例尺用双线框，单位米，分4段'});
    let styleRun;

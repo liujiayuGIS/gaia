@@ -61,6 +61,8 @@ def test_style_api_and_model_tool_use_same_validated_merge(tmp_path,monkeypatch)
     app=create_app(tmp_path)
     with TestClient(app) as client:
         assert client.get('/api/layout/styles').json()['north_styles'][0]['svg'].startswith('<svg')
+        font=client.get('/api/layout/fonts/noto-regular');assert font.status_code==200 and font.content[:4]==b'OTTO'
+        assert client.get('/api/layout/fonts/missing').status_code==404
         response=client.patch('/api/layout/items/title',json={'font_family':'Test Sans','font_weight':600})
         assert response.status_code==200
         assert client.patch('/api/layout/items/title',json={'font_family':'Missing'}).status_code==400
@@ -86,7 +88,9 @@ def test_native_styles_and_unit_conversion_survive_project_roundtrip(tmp_path,mo
     monkeypatch.delenv('GEOAGENT_DISABLE_QGIS',raising=False)
     s=Store(tmp_path);layer=formats.add_frame(s,'points',gpd.GeoDataFrame({'name':['A','B']},geometry=[Point(550000,5180000),Point(552000,5181000)],crs=32610),{})
     qgis=PluginManager(s).get('qgis');options=cartography.layout_styles(s)
-    family=options['default_font'];assert family in {f['family'] for f in options['fonts']}
+    assert options['default_cjk']
+    assert any(f.get('bundled') and f['family']=='Noto Sans CJK SC' for f in options['fonts'])
+    family='Noto Sans CJK SC';assert family in {f['family'] for f in options['fonts']}
     cartography.update_layout(s,{'plugin_id':'qgis','focus_layer_id':layer['id'],'map_crs':'EPSG:32610','font_family':family})
     def scene():return {e['id']:e for e in qgis.scene(s,cartography.get_layout(s),s.layers())['elements']}
     baseline=scene();meters=baseline['scale_bar']['scale_ground_segment_m']

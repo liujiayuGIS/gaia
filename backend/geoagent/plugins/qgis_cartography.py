@@ -1,44 +1,70 @@
 """Native QGIS project, style, print-layout and editable-scene operations."""
 import json
 import math
+import os
 from pathlib import Path
 import shutil
 import zipfile
 from qgis.core import *
 from qgis.PyQt.QtCore import Qt, QRectF, QSize, QSizeF
-from qgis.PyQt.QtGui import QColor, QFont, QFontDatabase, QPainter
+from qgis.PyQt.QtGui import QColor, QFont, QFontDatabase, QFontMetrics, QPainter
 from qgis.PyQt.QtXml import QDomDocument
 from cartography_styles import catalog,PREFERRED_FONTS,FONT_LABELS,TERRAIN_PALETTES,north_svg
 
 FONT='auto'
 STYLE_CONFIG={}
 _FONT_OPTIONS=None
+_BUNDLED_FAMILIES=None
 INK='#293941'
 COLORS=['#edf3db','#c5d9ce','#8db3a4','#527e73','#265047']
 TERRAIN=['#536d50','#829e69','#bacb92','#e3d5a3','#c1a781','#aa8978','#d3c6bb','#f8f6f0']
 
 
+def register_print_fonts():
+    """Qt's Windows offscreen plugin may start with an empty font database."""
+    global _BUNDLED_FAMILIES
+    if _BUNDLED_FAMILIES is not None:return _BUNDLED_FAMILIES
+    host=[Path('/System/Library/Fonts/Supplemental/Arial Unicode.ttf')]
+    if os.name=='nt':
+        windows_fonts=Path(os.environ.get('SystemRoot','C:/Windows'))/'Fonts'
+        host.extend(windows_fonts/name for name in ('msyh.ttc','msyhbd.ttc','simsun.ttc','simhei.ttf','segoeui.ttf','segoeuib.ttf','arial.ttf','arialbd.ttf'))
+    for path in host:
+        try:
+            if path.is_file():QFontDatabase.addApplicationFont(str(path))
+        except OSError:pass
+    bundled=set()
+    for path in sorted((Path(__file__).parent/'fonts').glob('*.otf')):
+        id=QFontDatabase.addApplicationFont(str(path))
+        if id<0:raise ValueError('无法加载随附中文字体：'+path.name)
+        bundled.update(QFontDatabase.applicationFontFamilies(id))
+    if 'Noto Sans CJK SC' not in bundled:raise ValueError('缺少随附中文字体，请检查完整安装包。')
+    _BUNDLED_FAMILIES=bundled
+    return bundled
+
+
 def font_catalog():
     global _FONT_OPTIONS
     if _FONT_OPTIONS is not None:return _FONT_OPTIONS
-    database=QFontDatabase()
-    for path in ['/System/Library/Fonts/Supplemental/Arial Unicode.ttf']:
-        if Path(path).exists():QFontDatabase.addApplicationFont(path)
-    families=set(database.families())
+    bundled=register_print_fonts()
+    families=set(QFontDatabase().families())
+    if not families:raise ValueError('QGIS 未找到可用字体，请检查完整安装包。')
     preferred=[x for x in PREFERRED_FONTS if x in families]
     featured=preferred+[x for x in FONT_LABELS if x in families and x not in preferred]
     answer=catalog()
     actual=set(QgsApplication.scaleBarRendererRegistry().renderers())
     answer['scale_styles']=[x for x in answer['scale_styles'] if x['id'] in actual]
-    answer.update(default_font=preferred[0] if preferred else QFont().family(),
-        fonts=[{'family':x,'label':FONT_LABELS.get(x,x),'recommended':x in featured} for x in featured+sorted(families-set(featured))])
+    default=preferred[0] if preferred else sorted(families)[0]
+    metrics=QFontMetrics(QFont(default))
+    answer.update(default_font=default,default_cjk=all(metrics.inFontUcs4(ord(c)) for c in '盖亚地理空间'),
+        fonts=[{'family':x,'label':FONT_LABELS.get(x,x),'recommended':x in featured,'bundled':x in bundled} for x in featured+sorted(families-set(featured))])
     _FONT_OPTIONS=answer
     return answer
 
 
 def font(size,family=None,weight=400,italic=False):
+    options=font_catalog()
     selected=family or STYLE_CONFIG.get('font_family','auto')
-    if selected=='auto':selected=font_catalog()['default_font']
+    if selected=='auto':selected=options['default_font']
     if selected not in QFontDatabase().families():raise ValueError('字体未安装：'+selected)
     value=QFont(selected);value.setPointSizeF(float(size))
     weights=getattr(QFont,'Weight',QFont)

@@ -25,7 +25,7 @@ from .store import now
 from .plugins.cartography_styles import validate_item_style
 
 LOCK=threading.RLock()
-for f in ['/System/Library/Fonts/Supplemental/Arial Unicode.ttf',str(Path(os.environ.get('SystemRoot','C:/Windows'))/'Fonts/msyh.ttc'),'/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc']:
+for f in ['/System/Library/Fonts/Supplemental/Arial Unicode.ttf',str(Path(os.environ.get('SystemRoot','C:/Windows'))/'Fonts/msyh.ttc'),'/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc',str(Path(__file__).parent/'plugins/fonts/NotoSansCJKsc-Regular.otf')]:
     if Path(f).exists():
         font_manager.fontManager.addfont(f);matplotlib.rcParams['font.family']=font_manager.FontProperties(fname=f).get_name();break
 matplotlib.rcParams['axes.unicode_minus']=False

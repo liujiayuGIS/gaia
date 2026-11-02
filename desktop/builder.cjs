@@ -5,7 +5,7 @@ module.exports={
  files:['*.cjs','boot.html','boot.css','boot.js','package.json'],
  extraResources:[
   {from:'../.desktop-build/runtime',to:'runtime',filter:['runtime.tar.gz','manifest.json','licenses/**/*']},
-  {from:'../backend/geoagent',to:'server/backend/geoagent',filter:['**/*.py','!**/__pycache__/**']},
+  {from:'../backend/geoagent',to:'server/backend/geoagent',filter:['**/*.py','**/fonts/*.otf','**/fonts/OFL.txt','**/fonts/sources.json','!**/__pycache__/**']},
   {from:'../frontend/dist',to:'server/frontend/dist'},
   {from:'../skills',to:'server/skills'},
   {from:'../docs/DESKTOP.md',to:'DESKTOP.md'},

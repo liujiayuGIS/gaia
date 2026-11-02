@@ -180,7 +180,7 @@ class QGISPlugin(AnalysisPlugin):
 
     def scene(self,store,layout,layers):
         config=layout.model_dump() if hasattr(layout,'model_dump') else layout
-        key=hashlib.sha256(json.dumps({'layout':config,'layers':store.ordered_layers(),'scene_version':7},sort_keys=True,ensure_ascii=False).encode()).hexdigest()
+        key=hashlib.sha256(json.dumps({'layout':config,'layers':store.ordered_layers(),'scene_version':8},sort_keys=True,ensure_ascii=False).encode()).hexdigest()
         try:return store.object('layout_scenes',key)['scene']
         except ValueError:pass
         job,request=self.prepare(store,config,layers,'project')

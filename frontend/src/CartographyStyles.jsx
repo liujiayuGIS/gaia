@@ -1,10 +1,11 @@
 import React from 'react';
 
 export function FontSelect({value,onChange,options,label='字体'}){
- const fonts=options?.fonts||[],recommended=fonts.filter(f=>f.recommended),others=fonts.filter(f=>!f.recommended);
+ const fonts=options?.fonts||[],recommended=fonts.filter(f=>f.recommended&&!f.bundled),bundled=fonts.filter(f=>f.bundled),others=fonts.filter(f=>!f.recommended&&!f.bundled);
  return <label className="style-field">{label}<select aria-label={label} value={value||'auto'} onChange={e=>onChange(e.target.value)}>
   <option value="auto">自动中文字体{options?.default_font?' · '+options.default_font:''}</option>
   {recommended.length>0&&<optgroup label="推荐字体">{recommended.map(f=><option key={f.family} value={f.family}>{f.label}</option>)}</optgroup>}
+  {bundled.length>0&&<optgroup label="随附开源字体">{bundled.map(f=><option key={f.family} value={f.family}>{f.label}</option>)}</optgroup>}
   {others.length>0&&<optgroup label="本机已安装">{others.map(f=><option key={f.family} value={f.family}>{f.label}</option>)}</optgroup>}
  </select></label>;
 }

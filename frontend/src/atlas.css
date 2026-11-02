@@ -323,3 +323,6 @@
 .font-specimen {font-size:20px;line-height:1.7;padding:12px 10px;margin:0 0 14px;border-radius:8px;color:var(--ink);background:var(--input);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .atlas-workbench .pane-fields,.atlas-workbench .element-properties {line-height:1.65}
 .atlas-workbench .pane-fields legend,.atlas-workbench .element-properties legend {font-size:13px;font-weight:600;color:var(--ink)}
+
+@font-face {font-family:'Noto Sans CJK SC';src:url('/api/layout/fonts/noto-regular') format('opentype');font-style:normal;font-weight:400;font-display:swap}
+@font-face {font-family:'Noto Sans CJK SC';src:url('/api/layout/fonts/noto-bold') format('opentype');font-style:normal;font-weight:700;font-display:swap}

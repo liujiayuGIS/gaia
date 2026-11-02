@@ -152,6 +152,9 @@ if __name__=='__main__':
                 initialize()
         stage='QGIS initQgis (authentication/network)'
         app.initQgis()
+        stage='QGIS print fonts'
+        from qgis_cartography import register_print_fonts
+        register_print_fonts()
         stage='QGIS processing'
         from processing.core.Processing import Processing
         Processing.initialize()

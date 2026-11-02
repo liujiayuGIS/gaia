@@ -51,3 +51,15 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+## Noto Sans CJK SC
+
+Regular and Bold font files are bundled unmodified from the official Noto CJK
+repository, under the SIL Open Font License 1.1. The complete license and pinned
+upstream revision / SHA-256 values accompany the fonts in
+`resources/server/backend/geoagent/plugins/fonts/OFL.txt` and `sources.json`.
+Source: https://github.com/notofonts/noto-cjk/tree/main/Sans/OTF/SimplifiedChinese
+License: https://github.com/notofonts/noto-cjk/blob/main/Sans/LICENSE
+
+These fonts are registered privately with Qt for GAIA's print worker, and served
+locally for the font preview. They are not installed into the operating system.

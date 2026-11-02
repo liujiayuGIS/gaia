@@ -254,6 +254,13 @@ def create_app(workspace=None):
     @app.get('/api/layout/styles')
     def layout_styles():return cartography.layout_styles(store)
 
+    @app.get('/api/layout/fonts/{font_id}')
+    def layout_font(font_id:str):
+        fonts={'noto-regular':'NotoSansCJKsc-Regular.otf','noto-bold':'NotoSansCJKsc-Bold.otf'}
+        if font_id not in fonts:raise HTTPException(404,'字体不存在。')
+        path=Path(__file__).parent/'plugins/fonts'/fonts[font_id]
+        return FileResponse(path,media_type='font/otf',headers={'Cache-Control':'private, max-age=86400'})
+
     @app.patch('/api/layout/items/{element_id}')
     def layout_item(element_id:str,body:dict):return cartography.update_layout_element(store,element_id,body)
 
