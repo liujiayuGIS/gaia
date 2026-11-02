@@ -17,7 +17,7 @@
 | macOS Apple Silicon（M 系列） | [下载 DMG](https://github.com/liujiayuGIS/gaia/releases/download/desktop-v0.5.0-beta.2-2c85c0d/GAIA-0.5.0-beta.2-mac-arm64.dmg)，要求 macOS 15+；打包应用与品牌检查通过 |
 | Windows 10/11 x64 | [下载安装器](https://github.com/liujiayuGIS/gaia/releases/download/desktop-v0.5.0-beta.2-2c85c0d/GAIA-0.5.0-beta.2-win-x64.exe)；实际安装、运行、重启及名称 / 图标检查通过 |
 
-打开 DMG，将 GAIA 拖入“应用程序”，首次启动等待本地 GIS 环境初始化。离线算法与制图不需要模型；复杂自然语言分析需配置自己的模型 API。当前 macOS 包尚无 Apple Developer ID / 公证，具体安装说明与 SHA-256 在发布页。仓库目前为私有，下载需要访问权限。
+打开 DMG，将 GAIA 拖入“应用程序”，首次启动等待本地 GIS 环境初始化。离线算法与制图不需要模型；复杂自然语言分析需配置自己的模型 API。当前 macOS 包尚无 Apple Developer ID / 公证，具体安装说明与 SHA-256 在发布页。仓库已公开，安装包可免登录下载。外部用户可查看、下载或 Fork，也可以提交 Pull Request；未获写权限的账号无法直接推送或合并修改到原仓库。
 
 第一次使用建议按 [十分钟完成第一张地图](docs/USER_GUIDE.md#quickstart) 操作：加载合成演示数据 → 执行 800 米缓冲计数 → 调整布局 → 检查出图 → 保存 PDF。
 

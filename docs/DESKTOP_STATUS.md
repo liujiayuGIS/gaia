@@ -22,4 +22,4 @@
 
 [发布页、安装包与 SHA-256](https://github.com/liujiayuGIS/gaia/releases/tag/desktop-v0.5.0-beta.2-2c85c0d) · [用户手册](USER_GUIDE.md) · [离线 HTML 手册](https://github.com/liujiayuGIS/gaia/releases/download/desktop-v0.5.0-beta.2-2c85c0d/GAIA-User-Guide-zh-CN.html)
 
-macOS 要求 15 或更新，采用 ad-hoc 签名，尚无 Apple 公证；Windows 尚无商业代码签名。仓库仍为私有，下载需要相应访问权限。
+macOS 要求 15 或更新，采用 ad-hoc 签名，尚无 Apple 公证；Windows 尚无商业代码签名。仓库已公开，安装包可免登录下载；公开访问不授予仓库写权限。
