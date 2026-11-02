@@ -7,6 +7,10 @@ on:
         type: choice
         options: [all, windows, macos]
         default: all
+      release_tag:
+        description: 'Existing release to complete (only test/workflow changes allowed)'
+        type: string
+        default: ''
   push:
     branches: [codex/desktop-v05, codex/desktop-beta2]
     paths: ['desktop/**', 'backend/**', 'frontend/**', 'skills/**', 'scripts/package_desktop_runtime.py', '.github/workflows/desktop.yml', 'docs/DESKTOP.md', 'docs/USER_GUIDE.md', 'docs/releases/**', 'docs/THIRD_PARTY_NOTICES.md']
@@ -29,9 +33,23 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TARGET: ${{ inputs.target || 'all' }}
+          REQUESTED_TAG: ${{ inputs.release_tag }}
         run: |
           VERSION=$(node -p "require('./desktop/package.json').version")
           TAG="desktop-v$VERSION-${GITHUB_SHA:0:7}"
+          if [ -n "$REQUESTED_TAG" ]; then
+            [[ "$REQUESTED_TAG" =~ ^desktop-v[0-9A-Za-z.-]+-[0-9a-f]{7}$ ]] || exit 1
+            [[ "$REQUESTED_TAG" == "desktop-v$VERSION-"* ]] || exit 1
+            gh release view "$REQUESTED_TAG" >/dev/null
+            git fetch --no-tags origin "refs/tags/$REQUESTED_TAG:refs/tags/$REQUESTED_TAG"
+            while IFS= read -r CHANGED_FILE; do
+              case "$CHANGED_FILE" in
+                desktop/tests/*|.github/workflows/*) ;;
+                *) echo "::error::Cannot reuse release: application input changed: $CHANGED_FILE"; exit 1 ;;
+              esac
+            done < <(git diff --name-only "$REQUESTED_TAG" "$GITHUB_SHA")
+            TAG="$REQUESTED_TAG"
+          fi
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           node -e 'const rows=[{runner:"macos-15",arch:"arm64",flag:"--mac --arm64"},{runner:"windows-2022",arch:"x64",flag:"--win --x64"}];const target=process.env.TARGET;console.log("matrix="+JSON.stringify({include:rows.filter(r=>target==="all"||(target==="windows"?r.runner.startsWith("windows"):r.runner.startsWith("macos")))}))' >> "$GITHUB_OUTPUT"
           gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --draft --prerelease --target "$GITHUB_SHA" --title "GAIA $VERSION · 桌面预览版" --notes-file docs/releases/0.5.0-beta.2.md
@@ -119,6 +137,16 @@ jobs:
           ./desktop/tests/branding.ps1 -Executable $env:GAIA_PACKAGED_EXECUTABLE -Installer $installer.FullName -ExpectedIcon .desktop-build/icons/icon.ico -Output .desktop-build/qa
       - name: Checksums
         run: node -e "const fs=require('fs'),c=require('crypto'),p='.desktop-build/installers/';(async()=>{for(const f of fs.readdirSync(p).filter(x=>/\.(dmg|exe)$/.test(x))){const h=c.createHash('sha256');for await(const b of fs.createReadStream(p+f))h.update(b);fs.writeFileSync(p+f+'.sha256',h.digest('hex')+'  '+f+'\n')}})().catch(e=>{console.error(e);process.exit(1)})"
+      - name: Preserve verification receipts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-verification-${{ matrix.runner }}
+          path: |
+            .desktop-build/qa/smoke-*.json
+            .desktop-build/qa/branding-*.json
+            .desktop-build/qa/*-icon-*.png
+            .desktop-build/qa/desktop-*.png
+          retention-days: 30
       - name: Upload tested installers to draft
         env:
           GH_TOKEN: ${{ github.token }}
