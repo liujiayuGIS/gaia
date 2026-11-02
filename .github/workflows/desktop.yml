@@ -81,8 +81,13 @@ jobs:
           micromamba run -n gaia-desktop python -m pytest backend/tests/test_desktop.py backend/tests/test_layout_styles.py desktop/tests/test_pack_runtime.py -q --basetemp .desktop-build/native-tests
       - name: Bundle Python and QGIS
         run: micromamba run -n gaia-desktop python scripts/package_desktop_runtime.py --prefix "$MAMBA_ROOT_PREFIX/envs/gaia-desktop" --skip-create
+      - name: Probe relocated Windows QGIS
+        if: runner.os == 'Windows'
+        run: node desktop/tests/probe-runtime.cjs
       - name: First launch, private API, and restart persistence
-        run: npm --prefix desktop run smoke
+        run: |
+          if [ "$RUNNER_OS" = Windows ]; then export GAIA_SMOKE_DATA_DIR="$(cat .desktop-build/qa/smoke-user-data.txt)"; fi
+          npm --prefix desktop run smoke
       - name: Create installer
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
