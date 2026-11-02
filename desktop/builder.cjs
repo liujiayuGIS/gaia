@@ -9,6 +9,8 @@ module.exports={
   {from:'../frontend/dist',to:'server/frontend/dist'},
   {from:'../skills',to:'server/skills'},
   {from:'../docs/DESKTOP.md',to:'DESKTOP.md'},
+  {from:'../docs/USER_GUIDE.md',to:'USER_GUIDE.md'},
+  {from:'../docs/releases/0.5.0-beta.2.md',to:'RELEASE_NOTES.md'},
   {from:'../docs/THIRD_PARTY_NOTICES.md',to:'THIRD_PARTY_NOTICES.md'},
   {from:'../frontend/public/gaia-icon.png',to:'gaia-icon.png'}
  ],

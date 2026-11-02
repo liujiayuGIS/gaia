@@ -1,9 +1,15 @@
 name: GAIA desktop
 on:
   workflow_dispatch:
+    inputs:
+      target:
+        description: 'Build platforms'
+        type: choice
+        options: [all, windows, macos]
+        default: all
   push:
-    branches: [codex/desktop-v05]
-    paths: ['desktop/**', 'backend/**', 'frontend/**', 'skills/**', 'scripts/package_desktop_runtime.py', '.github/workflows/desktop.yml', 'docs/DESKTOP.md', 'docs/THIRD_PARTY_NOTICES.md']
+    branches: [codex/desktop-v05, codex/desktop-beta2]
+    paths: ['desktop/**', 'backend/**', 'frontend/**', 'skills/**', 'scripts/package_desktop_runtime.py', '.github/workflows/desktop.yml', 'docs/DESKTOP.md', 'docs/USER_GUIDE.md', 'docs/releases/**', 'docs/THIRD_PARTY_NOTICES.md']
 env:
   PYTHONUTF8: '1'
 permissions:
@@ -16,31 +22,24 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
+      matrix: ${{ steps.tag.outputs.matrix }}
     steps:
       - uses: actions/checkout@v4
       - id: tag
         env:
           GH_TOKEN: ${{ github.token }}
+          TARGET: ${{ inputs.target || 'all' }}
         run: |
           VERSION=$(node -p "require('./desktop/package.json').version")
           TAG="desktop-v$VERSION-${GITHUB_SHA:0:7}"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --draft --prerelease --target "$GITHUB_SHA" --title "GAIA $VERSION · 桌面预览版" --notes-file docs/DESKTOP.md
+          node -e 'const rows=[{runner:"macos-15",arch:"arm64",flag:"--mac --arm64"},{runner:"macos-15-intel",arch:"x64",flag:"--mac --x64"},{runner:"windows-2022",arch:"x64",flag:"--win --x64"}];const target=process.env.TARGET;console.log("matrix="+JSON.stringify({include:rows.filter(r=>target==="all"||(target==="windows"?r.runner.startsWith("windows"):r.runner.startsWith("macos")))}))' >> "$GITHUB_OUTPUT"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --draft --prerelease --target "$GITHUB_SHA" --title "GAIA $VERSION · 桌面预览版" --notes-file docs/releases/0.5.0-beta.2.md
   build:
     needs: release
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - runner: macos-15
-            arch: arm64
-            flag: --mac --arm64
-          - runner: macos-15-intel
-            arch: x64
-            flag: --mac --x64
-          - runner: windows-2022
-            arch: x64
-            flag: --win --x64
+      matrix: ${{ fromJSON(needs.release.outputs.matrix) }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
     defaults:
@@ -72,13 +71,14 @@ jobs:
         env:
           PYTHONPATH: backend
           GAIA_DESKTOP_NATIVE_TESTS: '1'
+          GEOAGENT_NATIVE_TESTS: '1'
           GEOAGENT_WORKSPACE: .desktop-build/test-workspace
           GEOAGENT_CACHE_DIR: .desktop-build/test-cache
         run: |
           export GIS_QGIS_PYTHON="$MAMBA_ROOT_PREFIX/envs/gaia-desktop/bin/python"
           if [ "$RUNNER_OS" = Windows ]; then export GIS_QGIS_PYTHON="$MAMBA_ROOT_PREFIX/envs/gaia-desktop/python.exe"; fi
           export GIS_PYTHON="$GIS_QGIS_PYTHON"
-          micromamba run -n gaia-desktop python -m pytest backend/tests/test_desktop.py desktop/tests/test_pack_runtime.py -q --basetemp .desktop-build/native-tests
+          micromamba run -n gaia-desktop python -m pytest backend/tests/test_desktop.py backend/tests/test_layout_styles.py desktop/tests/test_pack_runtime.py -q --basetemp .desktop-build/native-tests
       - name: Bundle Python and QGIS
         run: micromamba run -n gaia-desktop python scripts/package_desktop_runtime.py --prefix "$MAMBA_ROOT_PREFIX/envs/gaia-desktop" --skip-create
       - name: First launch, private API, and restart persistence
@@ -137,8 +137,9 @@ jobs:
     needs: [release, build]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           TAG: ${{ needs.release.outputs.tag }}
-        run: gh release edit "$TAG" --draft=false --prerelease
+        run: gh release edit "$TAG" --draft=false --prerelease --notes-file docs/releases/0.5.0-beta.2.md

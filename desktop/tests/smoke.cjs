@@ -24,6 +24,8 @@ const {_electron:electron}=require('playwright');const path=require('node:path')
    localStorage.setItem('desktop-persistence-test','retained');
    return {health,demo:demo.status,count:layers.length,qgis:caps.plugins?.find(x=>x.id==='qgis')};
   });
+  assert(await page.locator('.atlas-workbench').count(),'Latest Atlas/Folio UI must be bundled');
+  assert.equal(await app.evaluate(({app})=>app.getVersion()),require('../package.json').version);
   assert(result.qgis?.available,JSON.stringify(result.qgis));
   assert(result.health.ok);assert.equal(result.demo,200);assert(result.count>0);
   console.log('Local API and QGIS ready');
@@ -36,13 +38,22 @@ const {_electron:electron}=require('playwright');const path=require('node:path')
    do{run=await (await fetch('/api/runs/'+started.id)).json();if(!['queued','running'].includes(run.status))break;await new Promise(r=>setTimeout(r,500))}while(Date.now()<deadline);
    if(run.status!=='completed')throw new Error(JSON.stringify(run));
    await json('/layout',{plugin_id:'qgis',title:'GAIA 桌面出图验证',focus_layer_id:run.output_layers[0],map_crs:'EPSG:32650',legend_position:'outside-right'},'PATCH');
+   const styles=await (await fetch('/api/layout/styles')).json();
+   if(styles.north_styles?.length!==4||styles.terrain_palettes?.length!==5||!styles.fonts?.some(f=>f.family===styles.default_font))throw new Error('Latest style/font catalog missing');
+   await json('/layout/items/title',{font_family:styles.default_font,font_weight:600,font_size:22},'PATCH');
+   const styled=await json('/runs',{session_id:'desktop-smoke',mode:'offline',message:'指北针改成罗盘玫瑰，比例尺用双线框，单位米，分4段'});
+   let styleRun;
+   do{styleRun=await (await fetch('/api/runs/'+styled.id)).json();if(!['queued','running'].includes(styleRun.status))break;await new Promise(r=>setTimeout(r,500))}while(Date.now()<deadline);
+   if(styleRun.status!=='completed')throw new Error(JSON.stringify(styleRun));
+   const scene=await (await fetch('/api/layout/scene')).json(),byId=Object.fromEntries(scene.elements.map(e=>[e.id,e]));
+   if(byId.north_arrow.north_style!=='rose'||byId.scale_bar.scale_style!=='Double Box'||byId.scale_bar.scale_units!=='m'||byId.title.font_family!==styles.default_font||byId.title.font_size!==22)throw new Error('Native style scene did not match request');
    const exported=await json('/layout/export',{format:'pdf',dpi:100});
    const pdf=await (await fetch(exported.url)).arrayBuffer();
    if(new TextDecoder().decode(pdf.slice(0,5))!=='%PDF-')throw new Error('Invalid exported PDF');
-   return {count:(await (await fetch('/api/layers')).json()).length,pdf:exported.url};
+   return {count:(await (await fetch('/api/layers')).json()).length,pdf:exported.url,font:styles.default_font,scaleStyles:styles.scale_styles.map(s=>s.id)};
   });
   result.count=analysis.count;
-  console.log('Analysis and PDF export passed');
+  console.log('Analysis, natural-language styles and native PDF export passed: '+JSON.stringify({font:analysis.font,scaleStyles:analysis.scaleStyles}));
   const saved=path.resolve(__dirname,'../../.desktop-build/qa/desktop-export-'+process.platform+'.pdf');
   fs.mkdirSync(path.dirname(saved),{recursive:true});
   // Acknowledge registration before clicking: main/renderer IPC can otherwise
@@ -65,6 +76,17 @@ const {_electron:electron}=require('playwright');const path=require('node:path')
   const renderer=await page.locator('.map-canvas').getAttribute('data-renderer');
   if(process.env.GAIA_SMOKE_NO_GPU==='1')assert.equal(renderer,'leaflet');
   console.log('Interactive map ready: '+renderer);
+  await page.getByRole('button',{name:'出图布局',exact:true}).click();
+  await page.waitForSelector('.layout-page .layout-item',{timeout:120000});
+  await page.locator('.contents-tree').getByRole('button',{name:'指北针',exact:true}).click();
+  await page.getByRole('button',{name:'指北针 极简线形',exact:true}).click();
+  await page.waitForFunction(async()=>{const r=await fetch('/api/layout');const c=await r.json();return c.items.north_arrow?.north_style==='minimal'},null,{timeout:30000});
+  const manual=await page.evaluate(async()=>{const r=await fetch('/api/layout/scene');const scene=await r.json();return scene.elements.find(e=>e.id==='north_arrow').north_style});
+  assert.equal(manual,'minimal');
+  await page.getByRole('button',{name:'外观设置',exact:true}).click();
+  await page.getByLabel('界面字体',{exact:true}).selectOption('sans');
+  await page.waitForFunction(()=>JSON.parse(localStorage.getItem('geoagent-appearance-v3')).font==='sans');
+  console.log('Desktop manual style and font controls passed');
   fs.mkdirSync(path.resolve(__dirname,'../../.desktop-build/qa'),{recursive:true});
   await page.screenshot({path:path.resolve(__dirname,'../../.desktop-build/qa/desktop-'+process.platform+'-'+process.arch+'.png')});
   fs.writeFileSync(path.resolve(__dirname,'../../.desktop-build/qa/smoke-user-data.txt'),userData);
@@ -73,7 +95,11 @@ const {_electron:electron}=require('playwright');const path=require('node:path')
   assert.equal(await page.evaluate(()=>localStorage.getItem('desktop-persistence-test')),'retained');
   const count=await page.evaluate(async()=>(await (await fetch('/api/layers')).json()).length);
   assert.equal(count,result.count);
-  console.log(JSON.stringify({desktop:'passed',platform:process.platform,arch:process.arch,layers:count,userData}));
+  const persisted=await page.evaluate(async()=>({layout:await (await fetch('/api/layout')).json(),font:JSON.parse(localStorage.getItem('geoagent-appearance-v3')).font}));
+  assert.equal(persisted.layout.items.north_arrow.north_style,'minimal');assert.equal(persisted.layout.items.scale_bar.scale_style,'Double Box');assert.equal(persisted.font,'sans');
+  const report={desktop:'passed',version:require('../package.json').version,platform:process.platform,arch:process.arch,packaged:!!process.env.GAIA_PACKAGED_EXECUTABLE,layers:count,font:analysis.font,userData,checks:['private-API','QGIS-analysis','installed-font-catalog','native-style-scene','offline-natural-language-styles','manual-style-and-font-controls','PDF-export','native-file-save','interactive-map','restart-preserves-layers-and-style-and-font']};
+  fs.writeFileSync(path.resolve(__dirname,'../../.desktop-build/qa/smoke-'+process.platform+'-'+process.arch+(report.packaged?'-packaged':'-development')+'.json'),JSON.stringify(report,null,2));
+  console.log(JSON.stringify(report));
  }catch(error){
   const qa=path.resolve(__dirname,'../../.desktop-build/qa');fs.mkdirSync(qa,{recursive:true});
   for(const file of ['desktop.log','desktop.log.previous']){const source=path.join(userData,'logs',file);if(fs.existsSync(source))fs.copyFileSync(source,path.join(qa,file))}

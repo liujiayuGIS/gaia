@@ -95,7 +95,7 @@ else{
    {label:'文件',submenu:[{label:'打开工作区目录',click:()=>shell.openPath(workspace)},{type:'separator'},{role:'quit',label:'退出 GAIA'}]},
    {label:'编辑',submenu:[{role:'undo'},{role:'redo'},{type:'separator'},{role:'cut'},{role:'copy'},{role:'paste'},{role:'selectAll'}]},
    {label:'视图',submenu:[{role:'reload',label:'重新加载界面'},{role:'resetZoom'},{role:'zoomIn'},{role:'zoomOut'},{role:'togglefullscreen'}]},
-   {label:'帮助',submenu:[{label:'用户手册',click:()=>shell.openExternal('https://github.com/liujiayuGIS/gaia/blob/main/docs/USER_GUIDE.md')},{label:'打开日志目录',click:()=>shell.openPath(logs)},{label:'下载与更新',click:()=>shell.openExternal('https://github.com/liujiayuGIS/gaia/releases')},{label:'关于 GAIA',click:()=>dialog.showMessageBox(window,{message:'GAIA '+app.getVersion(),detail:'地理空间人工智能助手盖亚\n数据与分析在本机运行；模型调用需要配置 API。'})}]}
+   {label:'帮助',submenu:[{label:'用户手册',click:()=>shell.openExternal('https://github.com/liujiayuGIS/gaia/blob/codex/desktop-beta2/docs/USER_GUIDE.md')},{label:'打开本地用户手册',click:()=>shell.openPath(app.isPackaged?path.join(resources,'USER_GUIDE.md'):path.join(serverRoot,'docs/USER_GUIDE.md'))},{label:'打开日志目录',click:()=>shell.openPath(logs)},{label:'下载与更新',click:()=>shell.openExternal('https://github.com/liujiayuGIS/gaia/releases')},{label:'关于 GAIA',click:()=>dialog.showMessageBox(window,{message:'GAIA '+app.getVersion(),detail:'地理空间人工智能助手盖亚\n数据与分析在本机运行；模型调用需要配置 API。'})}]}
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(menu));createWindow();void boot();
  });

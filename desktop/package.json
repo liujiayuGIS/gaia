@@ -1,7 +1,7 @@
 {
   "name": "gaia-desktop",
   "productName": "GAIA",
-  "version": "0.5.0-beta.1",
+  "version": "0.5.0-beta.2",
   "description": "GAIA · Geospatial Artificial Intelligence Assistant",
   "author": "GAIA Development",
   "license": "UNLICENSED",
@@ -13,6 +13,12 @@
     "smoke": "node tests/smoke.cjs",
     "dist": "electron-builder --config builder.cjs --publish never"
   },
-  "dependencies": {"tar": "7.5.22"},
-  "devDependencies": {"electron": "45.2.1", "electron-builder": "26.18.0", "playwright": "1.64.1"}
+  "dependencies": {
+    "tar": "7.5.22"
+  },
+  "devDependencies": {
+    "electron": "45.2.1",
+    "electron-builder": "26.18.0",
+    "playwright": "1.64.1"
+  }
 }
