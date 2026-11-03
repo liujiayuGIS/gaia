@@ -91,7 +91,7 @@ const {_electron:electron}=require('playwright');const path=require('node:path')
   const renderer=await page.locator('.map-canvas').getAttribute('data-renderer');
   if(process.env.GAIA_SMOKE_NO_GPU==='1')assert.equal(renderer,'leaflet');
   console.log('Interactive map ready: '+renderer);
-  const narrow=await page.locator('.mobile-navigation').isVisible();
+  let narrow=await page.locator('.mobile-navigation').isVisible();
   if(narrow)await page.getByRole('button',{name:'数据与工具',exact:true}).click();
   const fixtureRow=page.locator('[data-layer-id="'+imported.id+'"]');
   await fixtureRow.getByRole('button',{name:'删除图层 '+imported.name,exact:true}).click();
@@ -107,6 +107,11 @@ const {_electron:electron}=require('playwright');const path=require('node:path')
   },imported);
   result.count-=1;
   await page.reload();await page.locator('.atlas-workbench').waitFor();
+  // macOS hosted runners have a 1024px display and clamp native windows.
+  // Exercise the deliberately desktop-only separator in an explicit wide
+  // renderer viewport, while the earlier delete/undo still covers native size.
+  await page.setViewportSize({width:1480,height:960});
+  narrow=await page.locator('.mobile-navigation').isVisible();assert.equal(narrow,false);
   const separator=page.getByRole('separator',{name:'调整助手宽度'});
   const b=await separator.boundingBox();assert(b,'Desktop assistant separator must be visible');
   const beforeWidth=(await page.locator('.assistant-dock').boundingBox()).width;
