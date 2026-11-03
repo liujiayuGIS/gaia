@@ -12,7 +12,7 @@ export async function api(path,options={}){
  if(!r.ok)throw new Error(typeof data.detail==='string'?data.detail:JSON.stringify(data.detail||data));return data;
 }
 const post=(p,b={})=>api(p,{method:'POST',body:JSON.stringify(b)}),patch=(p,b)=>api(p,{method:'PATCH',body:JSON.stringify(b)});
-const names={list_layers:'读取图层',inspect_layer:'检查数据与坐标系',buffer_points:'生成距离缓冲区',count_points:'范围内 POI 统计',style_layer:'更新地图样式',search_algorithms:'检索 GIS 算法',get_algorithm:'读取算法契约',run_algorithm:'执行空间算法',list_imports:'检查数据收件箱',inspect_import:'检查文件与子图层',import_data:'导入地理数据',get_layout:'读取制图布局',update_layout:'调整制图布局',export_map:'导出地图',export_data:'导出数据',update_task_plan:'制定执行计划',zoom_to_layer:'定位结果图层',query_features:'查看属性样本'};
+const names={remove_layer:'删除图层',restore_layer:'恢复图层',list_removed_layers:'读取可恢复图层',list_layers:'读取图层',inspect_layer:'检查数据与坐标系',buffer_points:'生成距离缓冲区',count_points:'范围内 POI 统计',style_layer:'更新地图样式',search_algorithms:'检索 GIS 算法',get_algorithm:'读取算法契约',run_algorithm:'执行空间算法',list_imports:'检查数据收件箱',inspect_import:'检查文件与子图层',import_data:'导入地理数据',get_layout:'读取制图布局',update_layout:'调整制图布局',export_map:'导出地图',export_data:'导出数据',update_task_plan:'制定执行计划',zoom_to_layer:'定位结果图层',query_features:'查看属性样本'};
 const pref='geoagent-preferences-v1';
 function preferences(){try{return JSON.parse(localStorage.getItem(pref))||{}}catch{return {}}}
 function typeLabel(l){return l.kind==='raster'?'栅格':l.geometry_types?.some(x=>x.includes('Polygon'))?'面':l.geometry_types?.some(x=>x.includes('Line'))?'线':'点'}

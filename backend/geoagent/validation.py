@@ -47,6 +47,13 @@ def check_layer(store,id,requirements=None):
 
 def validate_result(store,name,data,requirements=None):
     if not isinstance(data,dict):return {'passed':True,'layers':[],'artifacts':[],'errors':[],'warnings':[]}
+    if name=='remove_layer':
+        id=data.get('removed_id');errors=[]
+        if not id or any(x['id']==id for x in store.layers()):errors.append('图层仍在工作区中，删除未完成')
+        try:
+            store.object('removed_layers',id)
+        except ValueError:errors.append('删除记录不存在')
+        return {'passed':not errors,'layers':[],'artifacts':[],'errors':errors,'warnings':[],'checks':['absent_from_workspace','recovery_metadata_retained']}
     layers=[];errors=[];warnings=[];artifacts=[]
     if requirements and any(requirements.get(k) for k in ('fields','crs','geometry_type','min_count')) and not result_layers(data):
         errors.append('验收条件要求空间图层，但工具未发布图层')

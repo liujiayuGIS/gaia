@@ -353,6 +353,14 @@ def create_app(workspace=None):
     @app.get('/api/layers/{layer_id}/preview')
     def raster_preview(layer_id: str):return Response(formats.raster_preview(store,layer_id),media_type='image/png')
 
+    @app.delete('/api/layers/{layer_id}')
+    def remove_layer(layer_id: str):
+        return store.remove_layer(layer_id)
+
+    @app.post('/api/layers/{layer_id}/restore')
+    def restore_layer(layer_id: str):
+        return store.restore_layer(layer_id)
+
     @app.patch('/api/layers/{layer_id}/name')
     def rename(layer_id: str,body: dict):
         name=str(body.get('name','')).strip()
@@ -521,7 +529,7 @@ def create_app(workspace=None):
         result=get_run(run_id)
         import importlib.metadata
         result['environment']={x:importlib.metadata.version(x) for x in ('shapely','pyproj','fastapi')}
-        result['artifacts']=[store.get_layer(x) for x in result.get('output_layers',[])]
+        result['artifacts']=[store.layer_snapshot(x) for x in result.get('output_layers',[])]
         return Response(json.dumps(result,ensure_ascii=False,indent=2),media_type='application/json',headers={'Content-Disposition':f'attachment; filename="run-{run_id}.json"'})
 
     dist=ROOT/'frontend/dist'

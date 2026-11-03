@@ -15,4 +15,4 @@ if not s.layers():
  with rasterio.open(p,'w',driver='GTiff',height=10,width=10,count=1,dtype='float32',crs='EPSG:4326',transform=rasterio.transform.from_bounds(116,39,117,40,10,10)) as dst:dst.write(np.arange(100,dtype='float32').reshape(10,10),1)
  l=s.add_raster('高程栅格',p);ids.append(l['id']);s.reorder_layers([ids[1],ids[0],ids[2]])
 import uvicorn
-uvicorn.run(app,host='127.0.0.1',port=8767)
+uvicorn.run(app,host='127.0.0.1',port=int(os.environ.get('PORT','8767')))

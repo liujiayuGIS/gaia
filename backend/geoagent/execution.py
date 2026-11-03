@@ -17,6 +17,7 @@ def scope(registry,prefix):
 
 
 def input_ids(registry,name,args):
+    if name in ('remove_layer','restore_layer'):return []
     if name=='run_algorithm':
         if ':' in args.get('algorithm_id',''):
             from .plugins import PluginManager
@@ -68,16 +69,18 @@ def execute(registry,run_id,name,raw,cancel):
     signature=digest([name,raw]);previous=store.step(run_id,step_id)
     if previous and previous['signature']!=signature:raise ValueError('恢复时工具参数发生变化，请新建任务。')
     if previous and previous['status']=='completed' and previous.get('result',{}).get('success'):
+        removed={s.get('result',{}).get('data',{}).get('removed_id') for s in store.steps(run_id)
+                 if s.get('name')=='remove_layer' and s.get('result',{}).get('success')}
         from .spatial_contracts import semantic_metadata
         declarations=previous['result'].get('data',{}).get('quality',{}).get('preflight',{}).get('declarations',{})
         for id,old in declarations.items():
-            if semantic_metadata(store,id)!=old:raise ValueError('输入的空间语义声明在暂停后变化，请重新规划任务。')
+            if semantic_metadata(store,id,include_removed=id in removed)!=old:raise ValueError('输入的空间语义声明在暂停后变化，请重新规划任务。')
         for id,expected in previous.get('input_hashes',{}).items():
-            if Memory(store).fingerprint(id)[0]!=expected:raise ValueError('已完成步骤的输入发生变化，不能安全续跑。')
+            if Memory(store).fingerprint(id,include_removed=id in removed)[0]!=expected:raise ValueError('已完成步骤的输入发生变化，不能安全续跑。')
         # Check the exact published result rather than recreating it.
         if previous['result'].get('success'):
             for item in previous['result'].get('validation',{}).get('layers',[]):
-                current,_=Memory(store).fingerprint(item['layer_id'])
+                current,_=Memory(store).fingerprint(item['layer_id'],include_removed=item['layer_id'] in removed)
                 if current!=item.get('content_hash'):raise ValueError('已完成步骤的成果发生变化，不能安全续跑。')
             import hashlib
             for item in previous['result'].get('validation',{}).get('artifacts',[]):
@@ -85,6 +88,8 @@ def execute(registry,run_id,name,raw,cancel):
                 if not path.is_file():raise ValueError('已完成步骤的导出文件丢失，不能安全续跑。')
                 with path.open('rb') as stream:current=hashlib.file_digest(stream,'sha256').hexdigest()
                 if current!=item['sha256']:raise ValueError('已完成步骤的导出文件变化，不能安全续跑。')
+        if name in ('remove_layer','restore_layer') and not validate_result(store,name,previous['result']['data'])['passed']:
+            raise ValueError('图层删除或恢复状态在暂停后变化，请新建任务。')
         store.event(run_id,'tool_replayed',{'step_id':step_id,'name':name})
         return previous['result']
     start=time.monotonic();run=store.run(run_id)

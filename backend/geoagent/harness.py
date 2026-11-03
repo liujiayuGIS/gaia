@@ -63,6 +63,9 @@ class Registry:
         self.pre_hooks.append(lambda tool,args,run:before(self,tool,args,run))
         self.post_hooks.append(lambda tool,args,data,run:after(self,tool,args,data,run))
         self.register(Tool('list_layers', '按从上到下的绘制顺序读取图层、ID、字段和几何类型；上方图层优先显示。', Empty, lambda a,r: store.ordered_layers()))
+        self.register(Tool('remove_layer', '删除指定工作区图层（不是隐藏）；保留源数据和恢复副本。先 list_layers 核对 ID、名称及数量，不得因名称相似误删其他图层。', LayerArgs, lambda a,r:store.remove_layer(a.layer_id,r),True))
+        self.register(Tool('list_removed_layers', '列出可以恢复的已删除图层及 ID、名称、要素数量。', Empty, lambda a,r:[{'id':x['id'],'name':x['metadata']['name'],'count':x['metadata']['count'],'removed_at':x['removed_at']} for x in store.objects('removed_layers')]))
+        self.register(Tool('restore_layer', '恢复 list_removed_layers 中的指定图层，尽量还原绘制顺序；数据文件保留在本地。', LayerArgs, lambda a,r:{'layer_id':store.restore_layer(a.layer_id)['id']},True))
         self.register(Tool('reorder_layers', '调整绘制顺序：layer_ids 必须包含全部图层 ID，从最上层到最下层；先 list_layers，不改变数据或可见性。', LayerOrderArgs, lambda a,r: {'layer_order':[x['id'] for x in store.reorder_layers(a.layer_ids)]},True))
         self.register(Tool('inspect_layer', '检查图层坐标系、几何、字段和最多三个属性样本。', LayerArgs, lambda a,r: gis.inspect(store,a.layer_id)))
         self.register(Tool('buffer_points', '按米生成点的直线距离缓冲，非路网服务区。仅支持城市尺度 Point 图层；返回新图层，不覆盖输入。', BufferArgs, lambda a,r: gis.buffer_points(store,a.layer_id,a.distance_m,r),True))
@@ -152,6 +155,7 @@ Shapefile 编码以文件声明或用户指定为准；声明缺失或冲突时�
 所有分析发布新图层，原始数据保留。结果为空也应说明。点缓冲是直线距离，不能冒充路网服务区。
 制图：get_layout/update_layout 设置指北针、图例、比例尺、标题、纸张和方向，再 export_map。位置使用 top-right 等明确值。
 导出数据用 export_data，返回实际下载 URL。根据用户要求 zoom_to_layer、style_layer。引用生成的 layer_id，不要伪造结果。
+删除图层用 remove_layer，表示从工作区移除，源文件和本地恢复副本仍保留；不要用隐藏冒充删除。先 list_layers 核对名称、ID、要素数，多个候选时询问，不凭猜测批量删除。恢复先 list_removed_layers 再 restore_layer。
 可用能力以插件目录为准，包括目录中已注册的路网算法；不要宣称支持尚未注册的分析或联网能力。
 明确坐标系、单位、空间谓词和重叠计数口径。用户未给必要距离或方法时询问。
 先读 get_spatial_contract 或 get_algorithm 的空间契约。run_algorithm.context 声明数量含义、单位、交通方式、边界口径、时间要求和验收严格程度；preflight_analysis 可先检查。不要为了通过检查编造日期、单位、速度或数据事实。
@@ -272,6 +276,18 @@ def studio_offline(registry,store,run,cancel):
         result=registry.execute(run['id'],name,args,cancel)
         if not result['success']:raise ValueError(result['error'])
         return result['data']
+    # Scope these explicit commands to layers, never feature/field deletion or
+    # a compound analysis that happens to mention removing an output later.
+    if re.match(r'^\s*(?:请|帮我|请帮我)?\s*(?:删除|移除|恢复|撤销删除)',text) and '图层' in text and not re.search(r'然后|再做|缓冲|统计|字段',text):
+        restore=bool(re.search(r'恢复|撤销删除',text))
+        candidates=call('list_removed_layers' if restore else 'list_layers',{})
+        named=[x for x in candidates if x['name'] in text or x['id'] in text]
+        if not named and not restore and re.search(r'当前|选中|这个|该图层|此图层',text):named=[x for x in candidates if x['id'] in run.get('selected_layers',[])]
+        counts=re.findall(r'(\d+)\s*(?:个)?要素',text)
+        if counts:named=[x for x in named if x['count']==int(counts[0])]
+        if len(named)!=1:return '请选中要删除的图层或写出完整名称；多个候选时不会批量删除。' if not restore else '请写明要恢复的图层完整名称。'
+        item=named[0];call('restore_layer' if restore else 'remove_layer',{'layer_id':item['id']})
+        return f"已{'恢复' if restore else '删除'}图层“{item['name']}”。"+('' if restore else '源数据保留，可用“恢复图层 '+item['name']+'”撤销。')
     if re.search(r'导入|加载文件|import',lower):
         assets=store.objects('assets')
         candidates=[x for x in assets if x['status']=='pending' and (x['name'] in text or any(r['path'] in text for r in x['resources']))]

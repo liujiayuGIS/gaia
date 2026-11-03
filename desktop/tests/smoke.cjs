@@ -92,6 +92,29 @@ const {_electron:electron}=require('playwright');const path=require('node:path')
   if(process.env.GAIA_SMOKE_NO_GPU==='1')assert.equal(renderer,'leaflet');
   console.log('Interactive map ready: '+renderer);
   const narrow=await page.locator('.mobile-navigation').isVisible();
+  if(narrow)await page.getByRole('button',{name:'数据与工具',exact:true}).click();
+  const fixtureRow=page.locator('[data-layer-id="'+imported.id+'"]');
+  await fixtureRow.getByRole('button',{name:'删除图层 '+imported.name,exact:true}).click();
+  await fixtureRow.waitFor({state:'detached'});
+  await page.getByRole('button',{name:'撤销删除',exact:true}).click();await fixtureRow.waitFor();
+  // The same removal is executable through the agent, without a model account.
+  await page.evaluate(async layer=>{
+   const response=await fetch('/api/runs',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({session_id:'desktop-smoke',mode:'offline',message:'删除图层 '+layer.name})});
+   if(!response.ok)throw new Error(await response.text());const started=await response.json();
+   const deadline=Date.now()+30000;
+   while(Date.now()<deadline){const run=await(await fetch('/api/runs/'+started.id)).json();if(!['queued','running'].includes(run.status)){if(run.status!=='completed'||!run.events.some(e=>e.type==='tool_completed'&&e.data.name==='remove_layer'&&e.data.result.success))throw new Error(JSON.stringify(run));return}await new Promise(r=>setTimeout(r,150))}
+   throw new Error('Layer removal did not settle');
+  },imported);
+  result.count-=1;
+  await page.reload();await page.locator('.atlas-workbench').waitFor();
+  const separator=page.getByRole('separator',{name:'调整助手宽度'});
+  const b=await separator.boundingBox();assert(b,'Desktop assistant separator must be visible');
+  const beforeWidth=(await page.locator('.assistant-dock').boundingBox()).width;
+  await page.mouse.move(b.x+b.width/2,b.y+b.height/2);await page.mouse.down();await page.mouse.move(b.x-76,b.y+b.height/2,{steps:12});await page.mouse.up();
+  const assistantWidth=await page.evaluate(()=>Number(localStorage.getItem('gaia-assistant-width-v1')));
+  assert(assistantWidth>beforeWidth+60);
+  assert.equal(await page.evaluate(async id=>(await(await fetch('/api/layers')).json()).some(x=>x.id===id),imported.id),false);
+  console.log('Layer delete, undo, natural-language removal and assistant pointer resize passed');
   await page.getByRole('button',{name:narrow?'布局':'出图布局',exact:true}).click();
   await page.waitForSelector('.layout-page .layout-item',{timeout:120000});
   if(narrow)await page.getByRole('button',{name:'数据与工具',exact:true}).click();
@@ -122,7 +145,9 @@ const {_electron:electron}=require('playwright');const path=require('node:path')
   const persisted=await page.evaluate(async()=>({layout:await (await fetch('/api/layout')).json(),font:JSON.parse(localStorage.getItem('geoagent-appearance-v3')).font}));
   assert.equal(persisted.layout.items.north_arrow.north_style,'minimal');assert.equal(persisted.layout.items.scale_bar.scale_style,'Double Box');assert.equal(persisted.font,'sans');
   assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('geoagent-preferences-v1')).max_output_tokens),16384);
-  const report={desktop:'passed',version:require('../package.json').version,platform:process.platform,arch:process.arch,packaged:!!process.env.GAIA_PACKAGED_EXECUTABLE,layers:count,font:analysis.font,userData,checks:['private-API','QGIS-analysis','Chinese-Shapefile-truncated-field-import','installed-font-catalog','native-style-scene','offline-natural-language-styles','manual-style-and-font-controls','model-output-budget-persistence','PDF-export','native-file-save','interactive-map','restart-preserves-layers-and-style-and-font']};
+  assert.equal(await page.evaluate(()=>Number(localStorage.getItem('gaia-assistant-width-v1'))),assistantWidth);
+  assert.equal(await page.evaluate(async id=>(await(await fetch('/api/layers')).json()).some(x=>x.id===id),imported.id),false);
+  const report={desktop:'passed',version:require('../package.json').version,platform:process.platform,arch:process.arch,packaged:!!process.env.GAIA_PACKAGED_EXECUTABLE,layers:count,font:analysis.font,userData,checks:['private-API','QGIS-analysis','Chinese-Shapefile-truncated-field-import','layer-delete-and-undo','natural-language-layer-removal','assistant-pointer-resize','layer-removal-and-assistant-width-persistence','installed-font-catalog','native-style-scene','offline-natural-language-styles','manual-style-and-font-controls','model-output-budget-persistence','PDF-export','native-file-save','interactive-map','restart-preserves-layers-and-style-and-font']};
   fs.writeFileSync(path.resolve(__dirname,'../../.desktop-build/qa/smoke-'+process.platform+'-'+process.arch+(report.packaged?'-packaged':'-development')+'.json'),JSON.stringify(report,null,2));
   console.log(JSON.stringify(report));
  }catch(error){

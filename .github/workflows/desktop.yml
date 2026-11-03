@@ -96,7 +96,7 @@ jobs:
           export GIS_QGIS_PYTHON="$MAMBA_ROOT_PREFIX/envs/gaia-desktop/bin/python"
           if [ "$RUNNER_OS" = Windows ]; then export GIS_QGIS_PYTHON="$MAMBA_ROOT_PREFIX/envs/gaia-desktop/python.exe"; fi
           export GIS_PYTHON="$GIS_QGIS_PYTHON"
-          micromamba run -n gaia-desktop python -m pytest backend/tests/test_desktop.py backend/tests/test_layout_styles.py backend/tests/test_provider.py backend/tests/test_shapefile_text.py desktop/tests/test_pack_runtime.py -q --basetemp .desktop-build/native-tests
+          micromamba run -n gaia-desktop python -m pytest backend/tests/test_desktop.py backend/tests/test_layout_styles.py backend/tests/test_provider.py backend/tests/test_shapefile_text.py backend/tests/test_layer_removal.py desktop/tests/test_pack_runtime.py -q --basetemp .desktop-build/native-tests
       - name: Create Chinese Shapefile regression fixture
         run: micromamba run -n gaia-desktop python desktop/tests/create_import_fixture.py
       - name: Bundle Python and QGIS

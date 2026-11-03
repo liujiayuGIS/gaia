@@ -54,12 +54,11 @@ class Memory:
     def paths(self,layer):
         root=self.store.root/'layers';id=layer['id']
         if layer.get('kind')=='raster':
-            from .formats import raster_path
-            return [raster_path(self.store,id)]
+            return [root/(id+'.tif')]
         return [p for p in (root/(id+'.geojson'),root/(id+'.gpkg')) if p.exists()]
 
-    def fingerprint(self,layer_id):
-        layer=self.store.get_layer(layer_id);paths=self.paths(layer)
+    def fingerprint(self,layer_id,*,include_removed=False):
+        layer=self.store.get_layer(layer_id,include_removed=include_removed);paths=self.paths(layer)
         if not paths or any(not p.is_file() for p in paths):raise ValueError('图层数据文件缺失：'+layer['name'])
         hashes={}
         for p in paths:

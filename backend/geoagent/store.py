@@ -72,12 +72,60 @@ class Store:
                        ('settings', 'layer_order', json.dumps(layer_ids)))
         return self.ordered_layers()
 
-    def get_layer(self, layer_id):
+    def get_layer(self, layer_id, *, include_removed=False):
         with self.db() as db:
             row = db.execute('SELECT metadata FROM layers WHERE id=?', (layer_id,)).fetchone()
         if row is None:
+            if include_removed:
+                return self.object('removed_layers',layer_id)['metadata']
             raise ValueError('图层不存在，请先调用 list_layers 读取当前图层。')
         return json.loads(row['metadata'])
+
+    def layer_snapshot(self, layer_id):
+        """Historical receipts survive workspace removal; data files are retained."""
+        try:return self.get_layer(layer_id)
+        except ValueError:
+            item=self.object('removed_layers',layer_id)
+            return {**item['metadata'],'workspace_removed':True,'removed_at':item['removed_at']}
+
+    def remove_layer(self, layer_id, run_id=None):
+        with self.lock, self.db() as db:
+            row=db.execute('SELECT metadata FROM layers WHERE id=?',(layer_id,)).fetchone()
+            if row is None:
+                old=self.object('removed_layers',layer_id)
+                return {'removed_id':layer_id,'name':old['metadata']['name'],'removed':True,'recoverable':True}
+            meta=json.loads(row['metadata'])
+            stack=[x['id'] for x in self.ordered_layers()]
+            item={'id':layer_id,'metadata':meta,'removed_at':now(),'run_id':run_id,'stack':stack}
+            db.execute('INSERT OR REPLACE INTO objects VALUES(?,?,?)',('removed_layers',layer_id,json.dumps(item,ensure_ascii=False)))
+            db.execute('DELETE FROM layers WHERE id=?',(layer_id,))
+            # Remove references used by standard and themed print layouts.
+            layout=self.setting('layout',{})
+            for key in ('focus_layer_id','context_layer_id'):
+                if layout.get(key)==layer_id:layout[key]=None
+            layout['template_bindings']={k:v for k,v in layout.get('template_bindings',{}).items() if v!=layer_id}
+            db.execute('INSERT OR REPLACE INTO objects VALUES(?,?,?)',('settings','layout',json.dumps(layout,ensure_ascii=False)))
+            order=self.setting('layer_order')
+            if order is not None:
+                db.execute('INSERT OR REPLACE INTO objects VALUES(?,?,?)',('settings','layer_order',json.dumps([id for id in order if id!=layer_id])))
+        return {'removed_id':layer_id,'name':meta['name'],'removed':True,'recoverable':True}
+
+    def restore_layer(self, layer_id):
+        with self.lock, self.db() as db:
+            # Repeated requests are harmless, without changing an active layer.
+            row=db.execute('SELECT metadata FROM layers WHERE id=?',(layer_id,)).fetchone()
+            if row:return json.loads(row['metadata'])
+            item=self.object('removed_layers',layer_id)
+            meta=item['metadata'];stack=item['stack'];index=stack.index(layer_id)
+            current=[x['id'] for x in self.ordered_layers()]
+            after=next((id for id in stack[index+1:] if id in current),None)
+            before=next((id for id in reversed(stack[:index]) if id in current),None)
+            position=current.index(after) if after else current.index(before)+1 if before else len(current)
+            current.insert(position,layer_id)
+            db.execute('INSERT INTO layers VALUES(?,?)',(layer_id,json.dumps(meta,ensure_ascii=False)))
+            db.execute('INSERT OR REPLACE INTO objects VALUES(?,?,?)',('settings','layer_order',json.dumps(current)))
+            db.execute('DELETE FROM objects WHERE kind=? AND id=?',('removed_layers',layer_id))
+        return meta
 
     def data(self, layer_id):
         self.get_layer(layer_id)

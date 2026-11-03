@@ -41,7 +41,14 @@
 .atlas-workbench .header-actions {margin-left:0;gap:5px;flex-shrink:0}
 .atlas-workbench .header-actions button {background:transparent;border-color:transparent}
 .atlas-workbench .header-actions button:first-child {border:0;background:transparent}
-.atlas-workbench .workspace {position:relative;display:grid;grid-template-columns:minmax(0,1fr) var(--assistant-width);grid-template-rows:minmax(0,1fr);padding:0;gap:0;min-height:0;flex:1;overflow:hidden}
+.atlas-workbench .workspace {--assistant-limit:calc(100vw - 450px);--assistant-track:clamp(320px,var(--assistant-user-width,var(--assistant-width)),min(760px,var(--assistant-limit)));position:relative;display:grid;grid-template-columns:minmax(0,1fr) 10px var(--assistant-track);grid-template-rows:minmax(0,1fr);padding:0;gap:0;min-height:0;flex:1;overflow:hidden}
+.assistant-resizer {grid-column:-3/-2;grid-row:1;z-index:13;display:flex;align-items:center;justify-content:center;cursor:col-resize;touch-action:none;outline-offset:-2px;background:var(--ground)}
+.assistant-resizer span {width:3px;height:40px;max-height:25%;border-radius:3px;background:var(--border)}
+.assistant-resizer:hover span,.assistant-resizer:focus-visible span,.assistant-resizer[data-active=true] span {background:var(--accent-ui,var(--accent))}
+.workspace[data-resizing=true] {cursor:col-resize;user-select:none}
+.workspace[data-resizing=true]>.document-area {pointer-events:none}
+.atlas-workbench .layer-remove {color:var(--muted);padding:5px;min-width:28px;min-height:28px}
+.atlas-workbench .layer-remove:hover:not(:disabled) {color:var(--danger);background:color-mix(in srgb,var(--danger) 9%,transparent)}
 .atlas-workbench .document-area {position:relative;grid-column:1;grid-row:1;min-width:0;display:flex;flex-direction:column;border:0;border-radius:0;overflow:hidden;background:var(--map-ground)}
 .atlas-workbench .document-body {min-height:0;flex:1;display:flex;flex-direction:column;position:relative}
 .atlas-workbench .map-document {flex:1;min-height:0;position:relative;overflow:hidden}
@@ -166,7 +173,7 @@
 .atlas-workbench .conversation {margin-bottom:24px;padding-bottom:22px;border-bottom:1px solid var(--border-soft)}
 
 /* Folio: semantic elements and real native QGIS page, never a flattened mockup. */
-.atlas-workbench[data-view=layout] .workspace {grid-template-columns:var(--folio-width) minmax(0,1fr) var(--assistant-width)}
+.atlas-workbench[data-view=layout] .workspace {--assistant-limit:calc(100vw - var(--folio-width) - 450px);grid-template-columns:var(--folio-width) minmax(0,1fr) 10px var(--assistant-track)}
 .atlas-workbench[data-view=layout] .layer-palette {position:relative;left:auto;top:auto;width:auto;max-height:none;height:100%;grid-column:1;grid-row:1;border-radius:0;background:var(--pane);box-shadow:none;backdrop-filter:none;border-right:1px solid var(--border-soft)}
 .atlas-workbench[data-view=layout] .document-area {grid-column:2;background:var(--paper-ground)}
 .atlas-workbench[data-view=layout] .contents-pane {flex:1;min-height:0}
@@ -180,7 +187,7 @@
 .atlas-workbench[data-view=layout] .document-actions .map-check {margin-left:auto}
 .atlas-workbench[data-view=layout] .document-actions .layout-export {background:var(--accent);color:var(--accent-ink);padding:5px 16px}
 .atlas-workbench[data-view=layout] .palette-toggle {left:8px;top:65px;width:28px;min-height:28px;opacity:.9;box-shadow:none;background:var(--control)}
-.atlas-workbench[data-view=layout][data-palette=closed] .workspace {grid-template-columns:minmax(0,1fr) var(--assistant-width)}
+.atlas-workbench[data-view=layout][data-palette=closed] .workspace {--assistant-limit:calc(100vw - 450px);grid-template-columns:minmax(0,1fr) 10px var(--assistant-track)}
 .atlas-workbench[data-view=layout][data-palette=closed] .document-area {grid-column:1}
 .atlas-workbench[data-view=layout][data-palette=closed] .layer-palette {display:none}
 .atlas-workbench .layout-page-thumb {margin:16px 14px 8px;padding:7px;border-radius:10px;background:var(--input);border:1px solid color-mix(in srgb,var(--accent) 45%,var(--border));display:flex;flex-direction:column;gap:9px;text-align:left;flex-shrink:0}
@@ -245,6 +252,7 @@
   .composer-actions span {font-size:8px}
 }
 @media(max-width:1050px) {
+  .atlas-workbench .assistant-resizer {display:none}
   .atlas-workbench .gaia-header {height:58px;padding:0 12px;gap:10px}
   .atlas-workbench .gaia-brand img {width:29px;height:29px;border-radius:9px}
   .atlas-workbench .gaia-brand strong {font-size:21px}

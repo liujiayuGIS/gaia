@@ -145,6 +145,10 @@ The compact header displays real task status and tool-operation count. Expansion
 
 The assistant is always separate on desktop, with independently scrolling history, a session selector and an anchored composer. Its header uses the original icon at 25px. The composer binds current layer context, supports attachments through the existing import flow and Cmd/Ctrl+Enter submission. Tools, approvals, validation and artifacts retain their existing backend contracts. Avoid enlarging tool JSON into the primary content; details are expandable.
 
+The assistant boundary is a 10px pointer/touch separator with a 3 × 40px rounded grip. Hover, keyboard focus and dragging use the current accent. Width defaults to the responsive design value, can be adjusted from 320–760px, and is clamped to preserve at least 440px of document space plus the visible print sidebar. Persist the requested width per client; narrower windows clamp it without overwriting that preference. Left/Right changes 24px (Shift: 64px), Home/End reaches bounds, double-click/Enter resets, and Escape cancels a gesture. Hide the separator in the existing single-surface navigation at 1050px and below. MapLibre already observes viewport resizing.
+
+Layer deletion is a quiet trash icon in each data row, using muted text until hover/focus. It removes a workspace layer and retains source/recovery data; show an undo action in the existing toast. Keep deletion distinct from the adjacent visibility control and from deleting geographic features. Names, counts, ambiguity, persistence and receipt integrity are execution behavior, not decoration.
+
 ### Native print editor
 
 The actual QGIS scene supplies movable items and preview imagery. Both horizontal and vertical rulers use real page dimensions. Selected objects retain resize handles, millimetre properties, visibility, lock and undo/redo. Selecting an item opens its properties even when the sidebar was previously collapsed.

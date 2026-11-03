@@ -51,9 +51,9 @@ def declare_semantics(store, layer_id, value, run_id=None):
     return value
 
 
-def semantic_metadata(store, layer_id):
-    value=store.get_layer(layer_id).get('semantics',{})
-    if value and value.get('content_hash')!=Memory(store).fingerprint(layer_id)[0]:
+def semantic_metadata(store, layer_id, *, include_removed=False):
+    value=store.get_layer(layer_id,include_removed=include_removed).get('semantics',{})
+    if value and value.get('content_hash')!=Memory(store).fingerprint(layer_id,include_removed=include_removed)[0]:
         raise ValueError('数据已变化，原有语义声明失效；请重新核对单位、数量含义与数据时间。')
     return value
 

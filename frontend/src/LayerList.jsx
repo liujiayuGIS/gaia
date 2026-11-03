@@ -1,7 +1,7 @@
 import React,{useEffect,useRef,useState} from 'react';
-import {ArrowUp,ArrowDown,GripVertical,Eye,EyeOff} from 'lucide-react';
+import {ArrowUp,ArrowDown,GripVertical,Eye,EyeOff,Trash2} from 'lucide-react';
 
-export default function LayerList({layers,selected,onSelect,onFit,onStyle,onVisibility,onReorder,saving}){
+export default function LayerList({layers,selected,onSelect,onFit,onStyle,onVisibility,onReorder,onRemove,saving,removing}){
  const list=useRef(),drag=useRef(null),frame=useRef(),latest=useRef(layers);
  const [gesture,setGesture]=useState(null),[announcement,setAnnouncement]=useState('');
  latest.current=layers;
@@ -61,6 +61,7 @@ export default function LayerList({layers,selected,onSelect,onFit,onStyle,onVisi
      <button className="layer-drag-handle" aria-label={'调整 '+l.name+' 的顺序'} aria-describedby="layer-order-hint" aria-keyshortcuts="ArrowUp ArrowDown Home End" title="拖动排序；也可用方向键、Home / End 调整" aria-disabled={saving||layers.length<2} onPointerDown={e=>start(e,l.id)} onPointerMove={track} onPointerUp={end} onPointerCancel={e=>{if(drag.current?.pointerId===e.pointerId)clear()}} onLostPointerCapture={e=>{if(drag.current?.pointerId===e.pointerId)clear()}} onKeyDown={e=>{const to={ArrowUp:i-1,ArrowDown:i+1,Home:0,End:layers.length-1}[e.key];if(to!==undefined){e.preventDefault();onSelect(l.id);move(l.id,to)}}}><GripVertical size={14}/></button>
      <button className="visibility" aria-label={'显示 '+l.name} onClick={()=>onVisibility(l)}>{l.style.visible!==false?<Eye size={14}/>:<EyeOff size={14}/>}</button>
      <button className="tree-name" title={l.name} onClick={()=>onSelect(l.id)} onDoubleClick={()=>onFit(l)}><span>{l.name}</span></button>
+     <button className="layer-remove" aria-label={'删除图层 '+l.name} title="删除图层（源数据保留，可撤销）" disabled={saving||removing} onClick={()=>onRemove(l)}><Trash2 size={14}/></button>
     </div>
     <button className="layer-symbol" onClick={()=>onStyle(l.id)}><i style={{background:l.style.color}}/><span>{l.kind==='raster'?'栅格影像':l.geometry_types?.join(' / ')}{l.kind!=='raster'&&' · '+l.count+' 要素'}</span></button>
    </div>)}
