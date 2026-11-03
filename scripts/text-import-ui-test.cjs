@@ -4,11 +4,12 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||path.resolve(__dirname,'
  const output=path.resolve(__dirname,'../outputs/text-import-fix');fs.mkdirSync(output,{recursive:true});
  const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH,args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
  try{
-  const page=await browser.newPage({viewport:{width:1480,height:1000}});const errors=[],loads=[];
+  const page=await browser.newPage({viewport:{width:Number(process.env.UI_WIDTH||1480),height:Number(process.env.UI_HEIGHT||1000)}});const errors=[],loads=[];
   page.on('pageerror',e=>errors.push(e.message));
   page.on('request',r=>{if(r.url().includes('/imports/')&&r.url().endsWith('/load'))loads.push(r.postDataJSON())});
   await page.goto(process.env.BASE_URL||'http://127.0.0.1:8771');await page.locator('.atlas-workbench').waitFor();
   const baseline=await page.evaluate(async()=>(await(await fetch('/api/layers')).json()).length);
+  if(await page.locator('.mobile-navigation').isVisible())await page.getByRole('button',{name:'数据与工具',exact:true}).click();
   await page.getByRole('button',{name:'添加数据',exact:true}).first().click();
   const dialog=page.getByRole('dialog',{name:'添加地理数据'});
   const fixture=path.resolve(__dirname,'../.desktop-build/qa/import-fixtures');

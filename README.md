@@ -4,7 +4,7 @@
 
 自然语言驱动的本地 GIS 工作台：导入矢量与栅格、执行空间分析、把结果发布为新图层，并按语言要求制作地图。
 
-当前分支包含 2026-11-02 的 **Atlas / Folio 界面升级**：地图上的浮动数据面板、独立助手、真实任务流程抽屉与原生出图工作区，0.5.0-beta.3 补齐中文 Shapefile 编码 / 截断字段名处理、可配置模型输出预算及 DeepSeek 推理工具链兼容；安装包经原生验收后发布。操作和验证见 [新版工作台说明](docs/ATLAS_WORKSPACE.md)，各平台安装验收记录见 [交付状态](docs/DESKTOP_STATUS.md)。
+当前分支包含 2026-11-02 的 **Atlas / Folio 界面升级**：地图上的浮动数据面板、独立助手、真实任务流程抽屉与原生出图工作区，0.5.0-beta.3 补齐中文 Shapefile 编码 / 截断字段名处理、可配置模型输出预算及 DeepSeek 推理工具链兼容；两平台安装包已通过原生验收并发布。操作和验证见 [新版工作台说明](docs/ATLAS_WORKSPACE.md)，各平台安装验收记录见 [交付状态](docs/DESKTOP_STATUS.md)。
 
 ![GAIA workspace](screenshots/gaia-workspace.png)
 
