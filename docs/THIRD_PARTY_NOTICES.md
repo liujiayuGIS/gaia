@@ -13,6 +13,11 @@ repository visibility and licensing do not replace the licenses of these compone
   under resources/runtime/licenses.
 - conda-pack: BSD-3-Clause, https://github.com/conda/conda-pack
 - Electron desktop dependencies: MIT / ISC and their package-specific license files.
+- Frontend Markdown rendering uses react-markdown 10.1.0 and remark-gfm 4.0.1
+  (MIT). Sources: https://github.com/remarkjs/react-markdown and
+  https://github.com/remarkjs/remark-gfm . Installed frontend package versions,
+  license metadata and available license texts are included under
+  `resources/runtime/licenses/frontend`, including their dependency notices.
 
 The build collects conda package names, versions, build identifiers, upstream package
 URLs, license metadata, available license files and recipes. It also records pip

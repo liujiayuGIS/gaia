@@ -4,18 +4,18 @@
 
 本地运行的地理空间人工智能工作台。用自然语言安排分析，也可以手动选择数据、填写参数；结果生成新图层，并通过 QGIS 布局编辑、核验和导出地图。
 
-**[用户手册](docs/USER_GUIDE.md) · [离线 HTML 手册](https://github.com/liujiayuGIS/gaia/releases/download/desktop-v0.5.0-beta.4-e7e2701/GAIA-User-Guide-zh-CN.html) · [下载安装包](https://github.com/liujiayuGIS/gaia/releases/tag/desktop-v0.5.0-beta.4-e7e2701) · [桌面开发源码](https://github.com/liujiayuGIS/gaia/tree/codex/desktop-beta2)**
+**[用户手册](docs/USER_GUIDE.md) · [离线 HTML 手册](https://github.com/liujiayuGIS/gaia/releases/download/desktop-v0.5.0-beta.5-df3cd7b/GAIA-User-Guide-zh-CN.html) · [下载安装包](https://github.com/liujiayuGIS/gaia/releases/tag/desktop-v0.5.0-beta.5-df3cd7b) · [桌面开发源码](https://github.com/liujiayuGIS/gaia/tree/codex/desktop-beta2)**
 
 ![GAIA 工作区](screenshots/gaia-workspace.png)
 
 ## 下载与开始使用
 
-当前桌面预览版为 **0.5.0-beta.4**，内置 Python、QGIS、GDAL/PROJ 和科学计算库。本版增加矢量 / 栅格图层删除与恢复，以及可持久保存的助手拖动调宽；保留中文 Shapefile 与 DeepSeek 修复。
+当前桌面预览版为 **0.5.0-beta.5**，内置 Python、QGIS、GDAL/PROJ 和科学计算库。本版增加提问 / 回答的复制、引用、编辑、只读重新回答、反馈、朗读及 Markdown 排版，保留图层删除 / 恢复、助手调宽、中文 SHP 与 DeepSeek 修复。
 
 | 平台 | 状态 |
 | --- | --- |
-| macOS Apple Silicon（M 系列） | [下载 DMG](https://github.com/liujiayuGIS/gaia/releases/download/desktop-v0.5.0-beta.4-e7e2701/GAIA-0.5.0-beta.4-mac-arm64.dmg)，要求 macOS 15+；打包应用与品牌检查通过 |
-| Windows 10/11 x64 | [下载安装器](https://github.com/liujiayuGIS/gaia/releases/download/desktop-v0.5.0-beta.4-e7e2701/GAIA-0.5.0-beta.4-win-x64.exe)；实际安装、运行、重启及名称 / 图标检查通过 |
+| macOS Apple Silicon（M 系列） | [下载 DMG](https://github.com/liujiayuGIS/gaia/releases/download/desktop-v0.5.0-beta.5-df3cd7b/GAIA-0.5.0-beta.5-mac-arm64.dmg)，要求 macOS 15+；打包应用与品牌检查通过 |
+| Windows 10/11 x64 | [下载安装器](https://github.com/liujiayuGIS/gaia/releases/download/desktop-v0.5.0-beta.5-df3cd7b/GAIA-0.5.0-beta.5-win-x64.exe)；实际安装、运行、重启及名称 / 图标检查通过 |
 
 打开 DMG，将 GAIA 拖入“应用程序”，首次启动等待本地 GIS 环境初始化。离线算法与制图不需要模型；复杂自然语言分析需配置自己的模型 API。当前 macOS 包尚无 Apple Developer ID / 公证，具体安装说明与 SHA-256 在发布页。仓库已公开，安装包可免登录下载。外部用户可查看、下载或 Fork，也可以提交 Pull Request；未获写权限的账号无法直接推送或合并修改到原仓库。
 
