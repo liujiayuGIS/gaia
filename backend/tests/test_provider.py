@@ -25,6 +25,15 @@ def test_deepseek_request_keeps_supported_parameters():
     assert 'max_completion_tokens' not in payload
 
 
+def test_deepseek_official_effort_is_forwarded_without_forcing_proxy_parameters():
+    config=resolve_config('https://api.deepseek.com','deepseek-reasoner','key',reasoning_effort='low')
+    assert completion_payload(config,[],[])['reasoning_effort']=='low'
+    config['base_url']='https://example.test/v1'
+    assert 'reasoning_effort' not in completion_payload(config,[],[])
+    config.update(base_url='https://api.deepseek.com',reasoning_effort='none')
+    assert completion_payload(config,[],[])['thinking']=={'type':'disabled'}
+
+
 def test_error_diagnostics_preserve_cause_and_redact_credentials():
     response=httpx.Response(400,json={'error':{'code':'unsupported_parameter','param':'max_tokens',
         'message':'Unsupported parameter max_tokens. SECRET_EXACT_KEY sk-proj-visible-prefix Bearer other-secret'}})

@@ -52,6 +52,9 @@ def completion_payload(config, messages, tools):
     # Leave sampling at the provider's defaults for reasoning models.
     if not reasoning_model:
         payload['temperature']=0.1
+    if urlparse(config['base_url']).hostname=='api.deepseek.com' and config.get('reasoning_effort'):
+        if config['reasoning_effort']=='none':payload['thinking']={'type':'disabled'}
+        else:payload['reasoning_effort']=config['reasoning_effort']
     # GPT-5.6 Sol (including its alias/snapshots) requires non-reasoning
     # mode when function tools are declared on Chat Completions.
     # Scope this rule narrowly: other reasoning models may reject "none".
