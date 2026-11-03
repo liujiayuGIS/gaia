@@ -4,7 +4,20 @@
 
 ## 0.5.0-beta.5
 
-消息复制、引用、编辑、只读重新回答、反馈及 Markdown 展示已完成浏览器与本机 Electron 验收。两平台安装包正在原生构建与安装验收；已交付的 beta.4 安装包保留在下方。
+本版已交付：提问和回答均有时间、复制与引用操作；提问可编辑为新任务，回答支持只读重新组织说明、反馈、Markdown / 代码复制和对话导出。系统离线语音可用时支持朗读。
+
+| 平台 | 本版实际检查 | 下载 |
+| --- | --- | --- |
+| macOS arm64 | 74 项原生测试；开发版及打包版真实系统剪贴板、引用、编辑、反馈持久化、只读重新回答；名称、图标、架构及使用后签名 | [DMG](https://github.com/liujiayuGIS/gaia/releases/download/desktop-v0.5.0-beta.5-df3cd7b/GAIA-0.5.0-beta.5-mac-arm64.dmg) |
+| Windows x64 | 74 项原生测试；开发版、打包版及 NSIS 实际安装后的同组消息操作与重启检查；GAIA 程序、安装器及快捷方式品牌验证 | [安装器](https://github.com/liujiayuGIS/gaia/releases/download/desktop-v0.5.0-beta.5-df3cd7b/GAIA-0.5.0-beta.5-win-x64.exe) |
+
+继续覆盖原生 GIS 分析、中文 SHP、图层删除与撤销、助手拖宽、字体和布局、PDF、原生保存、交互地图以及输出预算持久化。独立浏览器验收覆盖 15 组消息交互，包括正文 / 代码 / Markdown 复制、引用提交、编辑新任务、取消恢复草稿、反馈保留、导出、Markdown 渲染及深色 / 窄窗口菜单。常规后端回归 166 项通过、8 项原生专用检查跳过；原生构建使用上述各 74 项测试另外验收。
+
+- [两平台构建、安装及验收](https://github.com/liujiayuGIS/gaia/actions/runs/41596553003)
+- [Mac 回执](https://github.com/liujiayuGIS/gaia/releases/download/desktop-v0.5.0-beta.5-df3cd7b/GAIA-beta5-macos-verification.json) · [Windows 回执](https://github.com/liujiayuGIS/gaia/releases/download/desktop-v0.5.0-beta.5-df3cd7b/GAIA-beta5-windows-verification.json)
+- [发布页及 SHA-256](https://github.com/liujiayuGIS/gaia/releases/tag/desktop-v0.5.0-beta.5-df3cd7b) · [用户手册](USER_GUIDE.md) · [离线 HTML 手册](https://github.com/liujiayuGIS/gaia/releases/download/desktop-v0.5.0-beta.5-df3cd7b/GAIA-User-Guide-zh-CN.html)
+
+安装包应用输入基于 `df3cd7b901022c7ccb5a8246256986920681d275`，后续文档更新不改变安装包。消息模型测试采用模拟协议响应，没有使用付费账号；浏览器剪贴板与语音交互使用测试替身，桌面剪贴板另以真实写入 / 读回验收。未验证实际朗读音质和每台设备的语音可用性，未声称全部 GIS 算法均已逐项验收。
 
 ## 0.5.0-beta.4
 
