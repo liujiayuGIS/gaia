@@ -1,4 +1,4 @@
-const path=require('node:path');
+const version=require('./package.json').version;
 module.exports={
  appId:'org.gaia.geospatial',productName:'GAIA',asar:true,
  directories:{output:'../.desktop-build/installers',buildResources:'../.desktop-build/icons'},
@@ -10,7 +10,7 @@ module.exports={
   {from:'../skills',to:'server/skills'},
   {from:'../docs/DESKTOP.md',to:'DESKTOP.md'},
   {from:'../docs/USER_GUIDE.md',to:'USER_GUIDE.md'},
-  {from:'../docs/releases/0.5.0-beta.2.md',to:'RELEASE_NOTES.md'},
+  {from:'../docs/releases/'+version+'.md',to:'RELEASE_NOTES.md'},
   {from:'../docs/THIRD_PARTY_NOTICES.md',to:'THIRD_PARTY_NOTICES.md'},
   {from:'../frontend/public/gaia-icon.png',to:'gaia-icon.png'}
  ],

@@ -17,6 +17,7 @@ def check_layer(store,id,requirements=None):
     from pyproj import CRS
     requirements=requirements or {};errors=[];warnings=[]
     layer=store.get_layer(id)
+    warnings.extend(layer.get('import_warnings',[]))
     content_hash,_=Memory(store).fingerprint(id)
     if layer.get('kind')=='raster':
         import rasterio

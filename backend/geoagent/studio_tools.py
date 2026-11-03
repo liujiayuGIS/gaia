@@ -21,6 +21,8 @@ def install(registry,Tool,Args):
         resource: str | None=None
         sublayer: str | None=None
         source_crs: str | None=None
+        encoding: str | None=Field(default=None,max_length=64)
+        repair_truncated_fields: bool=True
     class Layout(Args):
         changes: dict[str,Any]
     class LayoutElement(Layout):
@@ -79,7 +81,10 @@ def install(registry,Tool,Args):
     registry.register(Tool('run_algorithm','执行已注册算法。先检查输入；严格按 get_algorithm 参数传入。结果保存为新图层并附加血缘。',RunAlgorithm,lambda a,r:(__import__('geoagent.plugins',fromlist=['PluginManager']).PluginManager(store).execute(a.algorithm_id,a.arguments,r,registry._local.cancel) if ':' in a.algorithm_id else algorithms.run_algorithm(store,a.algorithm_id,a.arguments,r)),True))
     registry.register(Tool('list_imports','列出用户已上传到数据收件箱的资产与可导入子资源；不读取宿主机任意目录。',Args,lambda a,r:store.objects('assets')))
     registry.register(Tool('inspect_import','检查待导入数据的文件、驱动、坐标系和子图层。',Asset,lambda a,r:store.object('assets',a.asset_id)))
-    registry.register(Tool('import_data','导入用户已上传的资产；遇到多资源必须指定 resource，多图层必须指定 sublayer；缺少 CRS 需用户明确。',Import,lambda a,r:formats.import_asset(store,a.asset_id,a.resource,a.source_crs,a.sublayer,r),True))
+    def import_data(a,r):
+        result=formats.import_asset(store,a.asset_id,a.resource,a.source_crs,a.sublayer,r,a.encoding,a.repair_truncated_fields)
+        return {**result,'layer_id':result['id']}
+    registry.register(Tool('import_data','导入已上传资产；多资源/子图层需指定，缺少 CRS 需用户明确。SHP 按声明读取编码，必要时用 encoding 指定实际编码；截断字段名可生成有记录的安全别名，不能猜测其含义。',Import,import_data,True))
     registry.register(Tool('get_layout','读取当前出图布局和指北针、图例、比例尺位置。',Args,lambda a,r:cartography.get_layout(store)))
     registry.register(Tool('get_layout_styles','读取真实可用的制图样式：QGIS比例尺样式、指北针造型、高程色带和本机字体；更改字体前先读此目录，不能编造已安装字体。',Args,lambda a,r:cartography.layout_styles(store)))
     registry.register(Tool('update_layout_element','修改单个布局元素，合并保存并保留其他元素与位置。element_id常用title/subtitle/source/legend/north_arrow/scale_bar；changes支持位置、font_family(必须已安装)/font_size/font_weight(400/500/600/700)/italic/color、north_style/north_color、scale_style/scale_units(m/km)/scale_segments(1–10)、legend_columns(1–4)/title。先get_layout_styles和get_layout；样式与手动编辑共用并用于真实导出。',LayoutElement,lambda a,r:cartography.update_layout_element(store,a.element_id,a.changes),True))

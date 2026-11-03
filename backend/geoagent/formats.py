@@ -75,6 +75,9 @@ def stage_files(store, files):
                 with rasterio.open(p) as src:
                     info.update(crs=str(src.crs) if src.crs else None,width=src.width,height=src.height,bands=src.count)
             elif kind=='vector' and p.suffix.lower() not in ('.json','.csv','.parquet','.geojsonl'):
+                if p.suffix.lower()=='.shp':
+                    from .shapefile_text import inspect_shapefile
+                    info['shapefile_text']=inspect_shapefile(p)
                 info['sublayers']=[str(x[0]) for x in pyogrio.list_layers(p)]
         except Exception:
             info['note']='需在导入时检查坐标系及驱动。'
@@ -86,7 +89,8 @@ def stage_files(store, files):
     return asset
 
 
-def import_asset(store, asset_id, resource=None, source_crs=None, sublayer=None, run_id=None):
+def import_asset(store, asset_id, resource=None, source_crs=None, sublayer=None, run_id=None,
+                 encoding=None, repair_truncated_fields=True):
     asset=store.object('assets',asset_id)
     choices=asset['resources']
     if resource:
@@ -127,7 +131,14 @@ def import_asset(store, asset_id, resource=None, source_crs=None, sublayer=None,
                 options['layer']=sublayer
             elif len(item.get('sublayers',[]))>1:
                 raise ValueError('此数据包含多个图层，请指定 sublayer：'+', '.join(item['sublayers']))
-            frame=gpd.read_parquet(path) if ext=='.parquet' else gpd.read_file(path,engine='pyogrio',**options)
+            repairs=[]
+            if ext=='.shp':
+                from .shapefile_text import read_shapefile
+                frame,text_info,repairs=read_shapefile(path,options,encoding,repair_truncated_fields)
+                prov['text_encoding']=text_info
+                if repairs:prov['field_name_repairs']=repairs
+            else:
+                frame=gpd.read_parquet(path) if ext=='.parquet' else gpd.read_file(path,engine='pyogrio',**options)
             if len(frame)>100000:
                 raise ValueError('本版单图层最多支持 100,000 个要素。')
             if frame.crs is None:
@@ -139,6 +150,9 @@ def import_asset(store, asset_id, resource=None, source_crs=None, sublayer=None,
                 if CRS(frame.crs)!=CRS(source_crs):
                     raise ValueError('文件原有坐标系与声明不一致，请按原坐标系导入。')
             meta=add_frame(store,path.stem,frame,prov,source='upload')
+            if repairs:
+                warning='源 DBF 字段名被多字节长度限制截断，已生成安全别名：'+', '.join(x['alias'] for x in repairs)+'。完整原名无法恢复，请核对字段含义；原文件及原字段字节已保留。'
+                meta=store.patch_layer(meta['id'],{'import_warnings':[warning]})
     asset['status']='imported';asset['layer_id']=meta['id'];store.put_object('assets',asset_id,asset)
     return meta
 

@@ -20,7 +20,7 @@ def test_openai_reasoning_payload_and_preserved_model():
 
 def test_deepseek_request_keeps_supported_parameters():
     payload=completion_payload({'model':'deepseek-chat','base_url':'https://api.deepseek.com'},[],[])
-    assert payload['max_tokens']==2000
+    assert payload['max_tokens']==8192
     assert payload['temperature']==.1
     assert 'max_completion_tokens' not in payload
 
@@ -120,3 +120,80 @@ def test_responses_preserves_reasoning_items_and_tool_call_outputs(tmp_path,monk
     assert calls[0]['reasoning']=={'effort':'medium'} and calls[0]['store'] is False
     assert 'reasoning.encrypted_content' in calls[0]['include']
     assert 'SECRET_KEY' not in json.dumps(store.events('responses'))
+
+
+def test_output_limit_can_resume_with_larger_budget_without_executing_partial_calls(tmp_path,monkeypatch):
+    import time
+    payloads=[]
+    def respond(request):
+        payload=json.loads(request.content);payloads.append(payload)
+        if len(payloads)==1:
+            message={'role':'assistant','content':None,'tool_calls':[{'id':'safe','type':'function',
+                'function':{'name':'list_layers','arguments':'{}'}}]};finish='tool_calls'
+        elif len(payloads)==2:
+            message={'role':'assistant','content':None,'tool_calls':[{'id':'partial','type':'function',
+                'function':{'name':'style_layer','arguments':'{"layer_id":'}}]};finish='length'
+        else:
+            assert payload['max_completion_tokens']==16384
+            assert not any(call['id']=='partial' for item in payload['messages'] for call in item.get('tool_calls',[]))
+            message={'role':'assistant','content':'已读取图层。'};finish='stop'
+        return httpx.Response(200,json={'id':'response','choices':[{'message':message,'finish_reason':finish}],
+                                       'usage':{'completion_tokens':2048}})
+    original=httpx.Client
+    monkeypatch.setattr('geoagent.provider.httpx.Client',lambda **kw:original(transport=httpx.MockTransport(respond),**kw))
+    store=Store(tmp_path);run={'id':'length','mode':'model','session_id':'s','message_input':'读取图层'}
+    config=resolve_config('https://api.openai.com/v1','test-model','SECRET_KEY','chat_completions',max_output_tokens=2048)
+    execute_run(store,Registry(store),run,config,threading.Event())
+    failed=store.run('length')
+    assert failed['status']=='failed' and failed['resumable'] and '2048 tokens' in failed['message']
+    assert len(store.steps('length'))==1 and store.steps('length')[0]['name']=='list_layers'
+    client=TestClient(create_app(tmp_path))
+    assert client.post('/api/runs/length/resume',json={'api_key':'SECRET_KEY','max_output_tokens':16384}).status_code==202
+    deadline=time.monotonic()+10
+    while time.monotonic()<deadline and store.run('length')['status'] in ('queued','running'):
+        time.sleep(.02)
+    assert store.run('length')['status']=='completed'
+    assert len(store.steps('length'))==1
+    assert store.run('length')['model_config']['max_output_tokens']==16384
+    assert 'SECRET_KEY' not in json.dumps(store.events('length'))
+
+
+def test_responses_incomplete_budget_has_actionable_diagnostics():
+    from geoagent.provider import request_responses,ProviderError,responses_payload
+    config=resolve_config('https://api.openai.com/v1','test-model','SECRET_KEY','responses',max_output_tokens=16384)
+    payload=responses_payload(config,[],[],'test')
+    assert payload['max_output_tokens']==16384
+    with httpx.Client(transport=httpx.MockTransport(lambda request:httpx.Response(200,json={
+            'status':'incomplete','output':[],'incomplete_details':{'reason':'max_output_tokens'}}))) as client:
+        with pytest.raises(ProviderError) as caught:request_responses(client,config,payload)
+    assert caught.value.details['code']=='output_limit'
+    assert '16384 tokens' in str(caught.value) and '检查点' in str(caught.value)
+
+
+@pytest.mark.parametrize('budget',[0,True,32769,None])
+def test_invalid_output_budgets_are_rejected_before_request(budget):
+    with pytest.raises(ValueError,match='输出预算'):
+        resolve_config('https://api.openai.com/v1','test-model','key',max_output_tokens=budget)
+
+
+def test_deepseek_reasoning_content_is_replayed_with_tool_results(tmp_path,monkeypatch):
+    seen=[]
+    def respond(request):
+        payload=json.loads(request.content);seen.append(payload)
+        assert payload['model']=='deepseek-reasoner' and payload['max_tokens']==8192
+        assert 'max_completion_tokens' not in payload and 'temperature' not in payload
+        if len(seen)==1:
+            message={'role':'assistant','content':None,'reasoning_content':'TEST_PROVIDER_STATE',
+                'tool_calls':[{'id':'call_1','type':'function','function':{'name':'list_layers','arguments':'{}'}}]}
+        else:
+            assert any(x.get('reasoning_content')=='TEST_PROVIDER_STATE' for x in payload['messages'])
+            assert any(x.get('role')=='tool' and x.get('tool_call_id')=='call_1' for x in payload['messages'])
+            message={'role':'assistant','content':'已读取图层。','reasoning_content':'TEST_FINAL_STATE'}
+        return httpx.Response(200,json={'choices':[{'message':message,'finish_reason':'tool_calls' if len(seen)==1 else 'stop'}]})
+    original=httpx.Client
+    monkeypatch.setattr('geoagent.provider.httpx.Client',lambda **kw:original(transport=httpx.MockTransport(respond),**kw))
+    store=Store(tmp_path);run={'id':'deepseek','mode':'model','session_id':'s','message_input':'读取图层'}
+    config=resolve_config('https://api.deepseek.com','deepseek-reasoner','TEST_KEY')
+    execute_run(store,Registry(store),run,config,threading.Event())
+    assert store.run('deepseek')['status']=='completed' and len(seen)==2
+    assert 'TEST_PROVIDER_STATE' not in json.dumps(store.events('deepseek'))

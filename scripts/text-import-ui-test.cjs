@@ -1,0 +1,52 @@
+const path=require('node:path'),fs=require('node:fs'),assert=require('node:assert/strict');
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||path.resolve(__dirname,'../desktop/node_modules/playwright'));
+(async()=>{
+ const output=path.resolve(__dirname,'../outputs/text-import-fix');fs.mkdirSync(output,{recursive:true});
+ const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH,args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+ try{
+  const page=await browser.newPage({viewport:{width:1480,height:1000}});const errors=[],loads=[];
+  page.on('pageerror',e=>errors.push(e.message));
+  page.on('request',r=>{if(r.url().includes('/imports/')&&r.url().endsWith('/load'))loads.push(r.postDataJSON())});
+  await page.goto(process.env.BASE_URL||'http://127.0.0.1:8771');await page.locator('.atlas-workbench').waitFor();
+  const baseline=await page.evaluate(async()=>(await(await fetch('/api/layers')).json()).length);
+  await page.getByRole('button',{name:'添加数据',exact:true}).first().click();
+  const dialog=page.getByRole('dialog',{name:'添加地理数据'});
+  const fixture=path.resolve(__dirname,'../.desktop-build/qa/import-fixtures');
+  await dialog.locator('input[type=file]').setInputFiles(fs.readdirSync(fixture).filter(n=>/\.(shp|shx|dbf|prj|cpg)$/i.test(n)).map(n=>path.join(fixture,n)));
+  await dialog.getByLabel('Shapefile 文字编码',{exact:true}).selectOption('UTF-8');
+  await dialog.getByRole('checkbox').uncheck();
+  await dialog.getByRole('button',{name:'直接导入',exact:true}).click();
+  await dialog.getByRole('alert').waitFor();
+  assert.match(await dialog.getByRole('alert').innerText(),/字段名.*截断/);
+  assert.equal(await page.evaluate(async()=>(await(await fetch('/api/layers')).json()).length),baseline);
+  await dialog.getByRole('checkbox').check();
+  await dialog.getByRole('button',{name:'直接导入',exact:true}).click();
+  await dialog.getByText('数据已导入，字段名需要核对',{exact:true}).waitFor();
+  assert.match(await dialog.innerText(),/f1_1/);
+  assert.equal(loads.at(-1).encoding,'UTF-8');assert.equal(loads.at(-1).repair_truncated_fields,true);
+  await page.screenshot({path:path.join(output,'import-warning.png')});
+  await dialog.getByRole('button',{name:'完成',exact:true}).click();
+  const layers=await page.evaluate(async()=>(await fetch('/api/layers')).json());
+  assert.equal(layers.length,baseline+1);assert(layers.at(-1).fields.includes('f1_1'));assert(layers.at(-1).import_warnings.length);
+  let tested=0;
+  await page.route('**/api/model/test',async route=>{
+   assert.equal(route.request().postDataJSON().max_output_tokens,16384);tested++;
+   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,message:'测试响应：预算已收到'})});
+  });
+  await page.getByTitle('模型设置',{exact:true}).first().click();
+  const settings=page.getByRole('dialog',{name:'模型与运行设置'});
+  await settings.getByRole('button',{name:'连接模型',exact:false}).click();
+  await settings.getByLabel('模型名称',{exact:true}).fill('test-only-model');
+  await settings.getByLabel('每轮输出预算',{exact:true}).selectOption('16384');
+  await settings.getByRole('button',{name:'测试连接',exact:true}).click();
+  await settings.locator('.connection-ok').waitFor();assert.equal(tested,1);
+  await page.screenshot({path:path.join(output,'model-budget.png')});
+  await settings.getByRole('button',{name:'离线指令',exact:false}).click();
+  await settings.getByRole('button',{name:'应用设置',exact:true}).click();
+  await page.reload();await page.locator('.atlas-workbench').waitFor();
+  assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('geoagent-preferences-v1')).max_output_tokens),16384);
+  assert.deepEqual(errors,[]);
+  const report={passed:true,checks:['explicit-import-encoding','repair-opt-out-blocks-import','source-preserving-alias-warning','model-budget-sent-to-API','budget-preserved-after-reload']};
+  fs.writeFileSync(path.join(output,'result.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));
+ }finally{await browser.close()}
+})().catch(e=>{console.error(e);process.exit(1)});

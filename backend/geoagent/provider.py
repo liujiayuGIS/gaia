@@ -5,8 +5,17 @@ import re
 from urllib.parse import urlparse
 import httpx
 
+DEFAULT_OUTPUT_TOKENS=8192
 
-def resolve_config(base_url, model, api_key, protocol="auto", reasoning_effort="medium"):
+
+def output_budget(config):
+    value=config.get('max_output_tokens',DEFAULT_OUTPUT_TOKENS)
+    if isinstance(value,bool) or not isinstance(value,int) or not 256<=value<=32768:
+        raise ValueError('模型输出预算应为 256–32768 tokens，并须在服务商支持范围内。')
+    return value
+
+
+def resolve_config(base_url, model, api_key, protocol="auto", reasoning_effort="medium", max_output_tokens=DEFAULT_OUTPUT_TOKENS):
     base=(base_url or os.environ.get('GIS_LLM_BASE_URL','https://api.deepseek.com')).strip().rstrip('/')
     parsed=urlparse(base)
     if parsed.scheme not in ('http','https') or not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment:
@@ -24,18 +33,22 @@ def resolve_config(base_url, model, api_key, protocol="auto", reasoning_effort="
     if protocol not in ('auto','responses','chat_completions') or reasoning_effort not in ('none','low','medium','high'):
         raise ValueError('接口协议或推理强度无效。')
     selected=('responses' if parsed.hostname=='api.openai.com' else 'chat_completions') if protocol=='auto' else protocol
-    return {'base_url':base,'model':name,'api_key':key,'protocol':selected,'reasoning_effort':reasoning_effort}
+    config={'base_url':base,'model':name,'api_key':key,'protocol':selected,'reasoning_effort':reasoning_effort,
+            'max_output_tokens':max_output_tokens}
+    output_budget(config)
+    return config
 
 
 def completion_payload(config, messages, tools):
     model=config['model']
-    reasoning_model=bool(re.match(r'^(?:gpt-[5-9](?:[.\-]|$)|o[1-9](?:[.\-]|$))',model))
+    openai_reasoning=bool(re.match(r'^(?:gpt-[5-9](?:[.\-]|$)|o[1-9](?:[.\-]|$))',model))
+    reasoning_model=openai_reasoning or model.startswith('deepseek-reasoner')
     official=urlparse(config['base_url']).hostname=='api.openai.com'
     payload={'model':model,'messages':messages,'tools':tools}
-    if official or reasoning_model:
-        payload['max_completion_tokens']=2000
+    if official or openai_reasoning:
+        payload['max_completion_tokens']=output_budget(config)
     else:
-        payload['max_tokens']=2000
+        payload['max_tokens']=output_budget(config)
     # Leave sampling at the provider's defaults for reasoning models.
     if not reasoning_model:
         payload['temperature']=0.1
@@ -138,7 +151,7 @@ def responses_payload(config,inputs,tools,instructions):
         flattened.append({'type':'function','name':fn['name'],'description':fn.get('description',''),
                           'parameters':fn['parameters'],'strict':False})
     return {'model':config['model'],'instructions':instructions,'input':inputs,'tools':flattened,
-            'reasoning':{'effort':config.get('reasoning_effort','medium')},'max_output_tokens':8192,
+            'reasoning':{'effort':config.get('reasoning_effort','medium')},'max_output_tokens':output_budget(config),
             'store':False,'include':['reasoning.encrypted_content']}
 
 
@@ -158,9 +171,18 @@ def request_responses(client,config,payload):
         raise ProviderError({'status':200,'code':'invalid_response','message':'服务响应不符合 Responses API，请检查接口协议。'}) from None
     if data.get('status') in ('failed','incomplete','cancelled'):
         reason=(data.get('incomplete_details') or data.get('error') or {}).get('reason','未完成')
+        if reason=='max_output_tokens':
+            raise output_limit_error(config,data.get('usage',{}),'max_output_tokens')
         raise ProviderError({'status':200,'code':'incomplete','message':'模型未完成本轮响应：'+redact(reason,config['api_key'])})
     return data
 
 
 def response_text(data):
     return '\n'.join(part.get('text','') for item in data['output'] if item.get('type')=='message' for part in item.get('content',[]) if part.get('type')=='output_text')
+
+
+def output_limit_error(config,usage=None,param='max_completion_tokens'):
+    budget=output_budget(config)
+    return ProviderError({'status':200,'code':'output_limit','param':param,'max_output_tokens':budget,
+        'usage':usage or {},'message':f'模型本轮输出达到 {budget} tokens 上限（可能包含推理）。'
+        '本轮不完整的工具调用未执行，已有成果和检查点保留。请在模型设置中提高“每轮输出预算”，再从检查点继续；服务商也可能有更低的上限。'})

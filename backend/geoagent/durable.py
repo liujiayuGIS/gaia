@@ -12,7 +12,7 @@ from langsmith import tracing_context
 from .execution import scope
 from .memory import Memory,digest
 from .provider import (ProviderError,completion_payload,responses_payload,request_completion,
-                       request_responses,response_text)
+                       request_responses,response_text,output_limit_error)
 from .store import now
 from .validation import validate_run
 
@@ -74,8 +74,11 @@ def build_graph(store,registry,run,config,cancel,saver):
             output=data['output'];calls=[x for x in output if x.get('type')=='function_call'];answer=response_text(data)
         else:
             choice=data['choices'][0]
-            if choice.get('finish_reason')=='length':raise ValueError('模型输出达到长度上限，可恢复或缩小任务范围。')
-            msg=choice['message'];output=[{k:msg[k] for k in ('role','content','tool_calls') if k in msg}]
+            if choice.get('finish_reason')=='length':
+                error=output_limit_error(config,data.get('usage',{}),'max_completion_tokens' if 'max_completion_tokens' in payload else 'max_tokens')
+                store.event(run['id'],'model_error',error.details)
+                raise error
+            msg=choice['message'];output=[{k:msg[k] for k in ('role','content','tool_calls','reasoning_content') if k in msg}]
             calls=[{'name':x['function']['name'],'arguments':x['function']['arguments'],'call_id':x['id']} for x in msg.get('tool_calls',[])]
             answer=msg.get('content') or ''
         if len(calls)>12:raise ValueError('单轮工具调用超过12个。')

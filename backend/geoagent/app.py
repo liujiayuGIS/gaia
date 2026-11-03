@@ -36,6 +36,7 @@ class ChatRequest(BaseModel):
     api_key: str=''
     protocol: str='auto'
     reasoning_effort: str='medium'
+    max_output_tokens: int=Field(default=8192,ge=256,le=32768)
     algorithm_id: str | None=None
     code: str | None=Field(default=None,max_length=30000)
     plugin_id: str='python'
@@ -56,6 +57,7 @@ class ResumeRequest(BaseModel):
     api_key: str=Field(default='',repr=False,max_length=1000)
     approval_id: str | None=None
     approved: bool | None=None
+    max_output_tokens: int | None=Field(default=None,ge=256,le=32768)
 
 class KnowledgeRequest(BaseModel):
     model_config=ConfigDict(extra='forbid')
@@ -73,6 +75,15 @@ class ConnectionRequest(BaseModel):
     api_key: str=Field(default='',repr=False,max_length=1000)
     protocol: str='auto'
     reasoning_effort: str='medium'
+    max_output_tokens: int=Field(default=8192,ge=256,le=32768)
+
+class ImportRequest(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    resource: str | None=None
+    sublayer: str | None=None
+    source_crs: str | None=None
+    encoding: str | None=Field(default=None,max_length=64)
+    repair_truncated_fields: bool=True
 
 class StyleRequest(BaseModel):
     visible: bool | None=None
@@ -133,7 +144,7 @@ def create_app(workspace=None):
 
     @app.post('/api/model/test')
     def model_test(body: ConnectionRequest):
-        config=resolve_config(body.base_url,body.model,body.api_key,body.protocol,body.reasoning_effort)
+        config=resolve_config(body.base_url,body.model,body.api_key,body.protocol,body.reasoning_effort,body.max_output_tokens)
         try:
             return test_connection(config,[t.schema() for t in registry.tools.values()])
         except ProviderError as exc:
@@ -295,8 +306,9 @@ def create_app(workspace=None):
         return formats.stage_files(store,content)
 
     @app.post('/api/imports/{asset_id}/load')
-    def load_asset(asset_id: str,body: dict):
-        return formats.import_asset(store,asset_id,body.get('resource'),body.get('source_crs'),body.get('sublayer'))
+    def load_asset(asset_id: str,body: ImportRequest):
+        return formats.import_asset(store,asset_id,body.resource,body.source_crs,body.sublayer,
+                                    encoding=body.encoding,repair_truncated_fields=body.repair_truncated_fields)
 
     @app.post('/api/layers/upload')
     async def upload(file: UploadFile=File(...),source_crs: str=Form('')):
@@ -457,10 +469,10 @@ def create_app(workspace=None):
     @app.post('/api/runs',status_code=202)
     def chat(body:ChatRequest):
         config=None
-        if body.mode=='model':config=resolve_config(body.base_url,body.model,body.api_key,body.protocol,body.reasoning_effort)
+        if body.mode=='model':config=resolve_config(body.base_url,body.model,body.api_key,body.protocol,body.reasoning_effort,body.max_output_tokens)
         elif body.mode not in ('offline','algorithm','workflow','code'):raise ValueError('未知运行模式。')
         if body.verify_recipe_id and body.verification_checks is None:raise ValueError('配方验证需要明确验收条件。')
-        data=body.model_dump(exclude={'api_key','base_url','model','protocol','reasoning_effort','message'},exclude_none=True)
+        data=body.model_dump(exclude={'api_key','base_url','model','protocol','reasoning_effort','max_output_tokens','message'},exclude_none=True)
         if body.analysis_context:data['analysis_context']=body.analysis_context.model_dump(exclude_unset=True)
         run={**data,'id':uuid.uuid4().hex,'message_input':body.message,'created_at':now(),'message':'','output_layers':[],
              'model_config':{k:v for k,v in (config or {}).items() if k!='api_key'}}
@@ -488,7 +500,8 @@ def create_app(workspace=None):
         config=None
         if run['mode']=='model':
             saved=run['model_config'];key=body.api_key or credentials.get(run_id,'')
-            config=resolve_config(saved['base_url'],saved['model'],key,saved['protocol'],saved['reasoning_effort'])
+            config=resolve_config(saved['base_url'],saved['model'],key,saved['protocol'],saved['reasoning_effort'],
+                                  body.max_output_tokens if body.max_output_tokens is not None else saved.get('max_output_tokens',8192))
         return launch(run,config,True,decision)
 
     @app.post('/api/runs/{run_id}/cancel')

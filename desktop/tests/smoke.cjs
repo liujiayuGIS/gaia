@@ -30,6 +30,20 @@ const {_electron:electron}=require('playwright');const path=require('node:path')
   assert(result.qgis?.available,JSON.stringify(result.qgis));
   assert(result.health.ok);assert.equal(result.demo,200);assert(result.count>0);
   console.log('Local API and QGIS ready');
+  const fixture=path.resolve(__dirname,'../../.desktop-build/qa/import-fixtures');
+  const files=fs.readdirSync(fixture).filter(name=>/\.(shp|shx|dbf|prj|cpg)$/i.test(name)).map(name=>({name,bytes:[...fs.readFileSync(path.join(fixture,name))]}));
+  const imported=await page.evaluate(async files=>{
+   const body=new FormData();for(const file of files)body.append('files',new Blob([new Uint8Array(file.bytes)]),file.name);
+   let response=await fetch('/api/imports',{method:'POST',body});if(!response.ok)throw new Error(await response.text());
+   const asset=await response.json();response=await fetch('/api/imports/'+asset.id+'/load',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({encoding:'UTF-8'})});
+   if(!response.ok)throw new Error(await response.text());
+   const layer=await response.json();const data=await(await fetch('/api/layers/'+layer.id+'/data')).json();
+   if(data.features[0].properties.f1_1!=='钟楼站'||data.features[0].properties.field_1!==11)throw new Error('Imported attribute values changed');
+   return layer;
+  },files);
+  assert.equal(imported.count,1);assert(imported.fields.includes('f1_1'));assert(imported.import_warnings?.length);
+  assert.equal(imported.provenance.field_name_repairs[0].alias,'f1_1');
+  console.log('Chinese Shapefile paths, truncated field alias and preserved import warning passed');
   const analysis=await page.evaluate(async()=>{
    const json=async(url,body,method='POST')=>{const r=await fetch('/api'+url,{method,headers:{'content-type':'application/json'},body:JSON.stringify(body)});if(!r.ok)throw new Error(await r.text());return r.json()};
    const layers=await (await fetch('/api/layers')).json();
@@ -90,6 +104,13 @@ const {_electron:electron}=require('playwright');const path=require('node:path')
   await page.getByLabel('界面字体',{exact:true}).selectOption('sans');
   await page.waitForFunction(()=>JSON.parse(localStorage.getItem('geoagent-appearance-v3')).font==='sans');
   console.log('Desktop manual style and font controls passed');
+  await page.getByTitle('模型设置',{exact:true}).first().click();
+  const settings=page.getByRole('dialog',{name:'模型与运行设置'});
+  await settings.getByRole('button',{name:'连接模型',exact:false}).click();
+  await settings.getByLabel('每轮输出预算',{exact:true}).selectOption('16384');
+  await settings.getByRole('button',{name:'离线指令',exact:false}).click();
+  await settings.getByRole('button',{name:'应用设置',exact:true}).click();
+  console.log('Model output budget control passed without a model request');
   fs.mkdirSync(path.resolve(__dirname,'../../.desktop-build/qa'),{recursive:true});
   await page.screenshot({path:path.resolve(__dirname,'../../.desktop-build/qa/desktop-'+process.platform+'-'+process.arch+'.png')});
   fs.writeFileSync(path.resolve(__dirname,'../../.desktop-build/qa/smoke-user-data.txt'),userData);
@@ -100,7 +121,8 @@ const {_electron:electron}=require('playwright');const path=require('node:path')
   assert.equal(count,result.count);
   const persisted=await page.evaluate(async()=>({layout:await (await fetch('/api/layout')).json(),font:JSON.parse(localStorage.getItem('geoagent-appearance-v3')).font}));
   assert.equal(persisted.layout.items.north_arrow.north_style,'minimal');assert.equal(persisted.layout.items.scale_bar.scale_style,'Double Box');assert.equal(persisted.font,'sans');
-  const report={desktop:'passed',version:require('../package.json').version,platform:process.platform,arch:process.arch,packaged:!!process.env.GAIA_PACKAGED_EXECUTABLE,layers:count,font:analysis.font,userData,checks:['private-API','QGIS-analysis','installed-font-catalog','native-style-scene','offline-natural-language-styles','manual-style-and-font-controls','PDF-export','native-file-save','interactive-map','restart-preserves-layers-and-style-and-font']};
+  assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('geoagent-preferences-v1')).max_output_tokens),16384);
+  const report={desktop:'passed',version:require('../package.json').version,platform:process.platform,arch:process.arch,packaged:!!process.env.GAIA_PACKAGED_EXECUTABLE,layers:count,font:analysis.font,userData,checks:['private-API','QGIS-analysis','Chinese-Shapefile-truncated-field-import','installed-font-catalog','native-style-scene','offline-natural-language-styles','manual-style-and-font-controls','model-output-budget-persistence','PDF-export','native-file-save','interactive-map','restart-preserves-layers-and-style-and-font']};
   fs.writeFileSync(path.resolve(__dirname,'../../.desktop-build/qa/smoke-'+process.platform+'-'+process.arch+(report.packaged?'-packaged':'-development')+'.json'),JSON.stringify(report,null,2));
   console.log(JSON.stringify(report));
  }catch(error){

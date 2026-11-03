@@ -148,6 +148,7 @@ GIS 算法通过 search_algorithms/get_algorithm 检索和 run_algorithm 执行�
 需要可复用成果时保存项目、布局模板或工作流。QGIS 项目包包含 QGZ/QPT/QML 和数据，使用原插件重新打开。
 复杂任务先 update_task_plan 给出简洁可见步骤。稳定链可 save_workflow 保存并 run_workflow 重放，避免重复模型规划。根据工具返回的真实错误修正，避免连续重复失败的调用。
 自然语言导入：list_imports/inspect_import 后 import_data。缺少 CRS、多个候选文件或子图层有歧义时询问用户，不猜测。
+Shapefile 编码以文件声明或用户指定为准；声明缺失或冲突时询问，不以反复试到能解码作为正确依据。截断字段名生成的安全别名不代表已恢复完整原名，须披露警告并核对字段含义。
 所有分析发布新图层，原始数据保留。结果为空也应说明。点缓冲是直线距离，不能冒充路网服务区。
 制图：get_layout/update_layout 设置指北针、图例、比例尺、标题、纸张和方向，再 export_map。位置使用 top-right 等明确值。
 导出数据用 export_data，返回实际下载 URL。根据用户要求 zoom_to_layer、style_layer。引用生成的 layer_id，不要伪造结果。
@@ -280,8 +281,11 @@ def studio_offline(registry,store,run,cancel):
         if not resources and len(asset['resources'])==1:resources=asset['resources']
         if len(resources)!=1:return '请指定子资源：'+', '.join(x['path'] for x in asset['resources'])
         crs=re.search(r'EPSG\s*:\s*(\d+)',text,re.I)
-        result=call('import_data',{'asset_id':asset['id'],'resource':resources[0]['path'],'source_crs':'EPSG:'+crs.group(1) if crs else None})
-        return f"已导入 {result['name']}，生成独立图层。坐标系：{result['crs']}。"
+        encoding=re.search(r'(?:编码|encoding)\s*(?:为|使用|是|[:：])?\s*(utf-?8|gb18030|gbk|cp936|936|big5|cp1252)',text,re.I)
+        result=call('import_data',{'asset_id':asset['id'],'resource':resources[0]['path'],
+            'source_crs':'EPSG:'+crs.group(1) if crs else None,'encoding':encoding.group(1) if encoding else None,
+            'repair_truncated_fields':'不允许修复字段名' not in text})
+        return f"已导入 {result['name']}，生成独立图层。坐标系：{result['crs']}。"+('\n'+'；'.join(result['import_warnings']) if result.get('import_warnings') else '')
     if re.search(r'指北针|图例|比例尺|标题|高程|色带|等高|山体阴影|字体|(?<!列)出图|导出.*(png|pdf|svg|jpeg|tiff|图片)',lower):
         changes={}
         for label,key in [('指北针','north_position'),('图例','legend_position'),('比例尺','scale_position')]:
