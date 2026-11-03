@@ -2,6 +2,23 @@
 
 支持平台仅为 **macOS Apple Silicon（arm64）** 与 **Windows 10/11 x64**。已移除 Intel Mac 构建、旧安装包及其校验文件；后续构建矩阵仅保留这两个平台。
 
+## 0.5.0-beta.4
+
+本版已交付，新增工作区图层删除 / 恢复，以及可保存的助手拖动调宽。删除适用于矢量与栅格，源文件和本地恢复数据保留；图层面板和自然语言共用底层操作。
+
+| 平台 | 本版实际检查 | 下载 |
+| --- | --- | --- |
+| macOS arm64 | 66 项原生测试；开发版及打包版删除、撤销、自然语言删除、拖宽、重启状态保留；名称、图标、架构与使用后签名 | [DMG](https://github.com/liujiayuGIS/gaia/releases/download/desktop-v0.5.0-beta.4-e7e2701/GAIA-0.5.0-beta.4-mac-arm64.dmg) |
+| Windows x64 | 66 项原生测试；开发版、打包版及 NSIS 实际安装后的同组交互与重启检查；应用 / 安装器图标一致，GAIA 快捷方式正确 | [安装器](https://github.com/liujiayuGIS/gaia/releases/download/desktop-v0.5.0-beta.4-e7e2701/GAIA-0.5.0-beta.4-win-x64.exe) |
+
+同时保留中文 Shapefile、原生 GIS 分析、字体与布局样式、PDF、原生文件保存、交互地图及输出预算持久化验收。独立浏览器检查覆盖鼠标拖拽、键盘、取消与复位、宽度刷新保留、出图空间、删除失败回退、自然语言恢复、栅格移除以及深浅主题与窄窗口。
+
+- [Mac 构建与验收](https://github.com/liujiayuGIS/gaia/actions/runs/41589694557) · [Mac 回执](https://github.com/liujiayuGIS/gaia/releases/download/desktop-v0.5.0-beta.4-e7e2701/GAIA-beta4-macos-verification.json)
+- [Windows 构建、安装与验收](https://github.com/liujiayuGIS/gaia/actions/runs/41590019629) · [Windows 回执](https://github.com/liujiayuGIS/gaia/releases/download/desktop-v0.5.0-beta.4-e7e2701/GAIA-beta4-windows-verification.json)
+- [发布页与 SHA-256](https://github.com/liujiayuGIS/gaia/releases/tag/desktop-v0.5.0-beta.4-e7e2701) · [用户手册](USER_GUIDE.md) · [离线 HTML 手册](https://github.com/liujiayuGIS/gaia/releases/download/desktop-v0.5.0-beta.4-e7e2701/GAIA-User-Guide-zh-CN.html)
+
+应用输入基于 `e7e2701259d704b6608a73a260f7a9855e834710`。构建提交 `7d6123d` 仅调整桌面测试的宽视口：构建机原生 1024px 窄窗口按产品规则隐藏调宽手柄，测试先验证窄窗口删除，再显式切换宽视口验证分隔线；工作流已检查打包应用输入与发布标签一致。此后文档更新不改变安装包。验收使用合成数据和模拟模型协议，不代表全部 GIS 算法或特定付费模型账号均已验证。
+
 ## 0.5.0-beta.3
 
 中文 Shapefile 导入、输出预算与 DeepSeek 工具链修复已完成桌面原生验收并发布。应用输入基于 `3d2aafdbe48272864d2f3bec1ae3a3ecb806aae4`；下方保留 beta.2 历史交付记录。
