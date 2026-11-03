@@ -1,6 +1,24 @@
-# 桌面版交付状态（2026-11-02）
+# 桌面版交付状态（2026-11-03）
 
 支持平台仅为 **macOS Apple Silicon（arm64）** 与 **Windows 10/11 x64**。已移除 Intel Mac 构建、旧安装包及其校验文件；后续构建矩阵仅保留这两个平台。
+
+## 0.5.0-beta.3
+
+中文 Shapefile 导入、输出预算与 DeepSeek 工具链修复已完成桌面原生验收并发布。应用输入基于 `3d2aafdbe48272864d2f3bec1ae3a3ecb806aae4`；下方保留 beta.2 历史交付记录。
+
+| 平台 | 本版实际检查 | 下载 |
+| --- | --- | --- |
+| macOS arm64 | 61 项原生测试；开发版及打包版启动、导入和重启；GAIA 名称、盖亚图标、arm64 架构及使用后签名验证 | [DMG](https://github.com/liujiayuGIS/gaia/releases/download/desktop-v0.5.0-beta.3-3d2aafd/GAIA-0.5.0-beta.3-mac-arm64.dmg) |
+| Windows x64 | 61 项原生测试；开发版、打包版及 NSIS 实际安装后的启动、导入和重启；应用与安装器图标一致，快捷方式名称和目标正确 | [安装器](https://github.com/liujiayuGIS/gaia/releases/download/desktop-v0.5.0-beta.3-3d2aafd/GAIA-0.5.0-beta.3-win-x64.exe) |
+
+本版新增验收覆盖中文路径下的真实 Shapefile 文件、被截断字段名的安全别名、原中文属性值和数值保留、导入警告，以及输出预算设置的重启持久化。沿用 GIS 分析、字体、自然语言与手动布局样式、PDF、原生保存及地图交互检查。
+
+- [完整构建、安装及验收记录](https://github.com/liujiayuGIS/gaia/actions/runs/41576918202)
+- [macOS 验收回执](https://github.com/liujiayuGIS/gaia/releases/download/desktop-v0.5.0-beta.3-3d2aafd/GAIA-beta3-macos-verification.json)
+- [Windows 验收回执](https://github.com/liujiayuGIS/gaia/releases/download/desktop-v0.5.0-beta.3-3d2aafd/GAIA-beta3-windows-verification.json)
+- [发布页及 SHA-256](https://github.com/liujiayuGIS/gaia/releases/tag/desktop-v0.5.0-beta.3-3d2aafd) · [更新说明](releases/0.5.0-beta.3.md) · [用户手册](USER_GUIDE.md) · [离线 HTML 手册](https://github.com/liujiayuGIS/gaia/releases/download/desktop-v0.5.0-beta.3-3d2aafd/GAIA-User-Guide-zh-CN.html)
+
+原用户数据未取得，导入回归使用生成的真实 SHP 测试文件复现。DeepSeek 兼容验证采用模拟协议响应，未调用付费账号；实际服务连通性仍由用户配置决定。验收范围不代表全部 GIS 算法均已逐项验证。安装包基于上述源码提交，此后文档和独立浏览器测试脚本更新不改变已打包应用。
 
 ## 0.5.0-beta.2 已交付
 
