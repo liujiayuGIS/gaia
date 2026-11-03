@@ -1,4 +1,4 @@
-const {app,BrowserWindow,Menu,protocol,net,session,shell,dialog,ipcMain}=require('electron');
+const {app,BrowserWindow,Menu,protocol,net,session,shell,dialog,ipcMain,clipboard}=require('electron');
 const fs=require('node:fs');const fsp=fs.promises;const path=require('node:path');const crypto=require('node:crypto');
 const {spawn}=require('node:child_process');const runtime=require('./runtime.cjs');
 app.setName('GAIA');
@@ -91,6 +91,11 @@ else{
   });
   ipcMain.handle('boot-state',event=>event.senderFrame.url===bootURL?{text:currentStatus,error:failure}:null);
   ipcMain.handle('boot-retry',event=>{if(event.senderFrame.url===bootURL&&failure)void boot()});
+  ipcMain.handle('clipboard-write-text',async(event,text)=>{
+   const address=new URL(event.senderFrame.url);
+   if(event.senderFrame!==event.sender.mainFrame||address.protocol!=='gaia:'||address.host!=='app'||address.pathname!=='/'||typeof text!=='string'||Buffer.byteLength(text,'utf8')>2*1024*1024)throw new Error('无效的复制请求。');
+   await clipboard.writeText(text);return {copied:true};
+  });
   const menu=[
    ...(process.platform==='darwin'?[{label:'GAIA',submenu:[{role:'about'},{type:'separator'},{role:'quit'}]}]:[]),
    {label:'文件',submenu:[{label:'打开工作区目录',click:()=>shell.openPath(workspace)},{type:'separator'},{role:'quit',label:'退出 GAIA'}]},

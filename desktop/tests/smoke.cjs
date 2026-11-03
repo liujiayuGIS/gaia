@@ -65,7 +65,7 @@ const {_electron:electron}=require('playwright');const path=require('node:path')
    const exported=await json('/layout/export',{format:'pdf',dpi:100});
    const pdf=await (await fetch(exported.url)).arrayBuffer();
    if(new TextDecoder().decode(pdf.slice(0,5))!=='%PDF-')throw new Error('Invalid exported PDF');
-   return {count:(await (await fetch('/api/layers')).json()).length,pdf:exported.url,font:styles.default_font,scaleStyles:styles.scale_styles.map(s=>s.id)};
+   return {runId:run.id,count:(await (await fetch('/api/layers')).json()).length,pdf:exported.url,font:styles.default_font,scaleStyles:styles.scale_styles.map(s=>s.id)};
   });
   result.count=analysis.count;
   console.log('Analysis, natural-language styles and native PDF export passed: '+JSON.stringify({font:analysis.font,scaleStyles:analysis.scaleStyles}));
@@ -139,6 +139,27 @@ const {_electron:electron}=require('playwright');const path=require('node:path')
   await settings.getByRole('button',{name:'离线指令',exact:false}).click();
   await settings.getByRole('button',{name:'应用设置',exact:true}).click();
   console.log('Model output budget control passed without a model request');
+  await page.getByLabel('助手会话',{exact:true}).selectOption('desktop-smoke');
+  const originalMessage=page.locator('[data-run-id="'+analysis.runId+'"]');
+  const questionActions=originalMessage.getByRole('group',{name:'提问操作',exact:true}),answerActions=originalMessage.getByRole('group',{name:'回答操作',exact:true});
+  await questionActions.getByRole('button',{name:'复制提问',exact:true}).click();
+  assert.equal(await app.evaluate(async({clipboard})=>await clipboard.readText()),'Desktop buffer verification');
+  await answerActions.getByRole('button',{name:'复制回答',exact:true}).click();
+  const copiedAnswer=await app.evaluate(async({clipboard})=>await clipboard.readText());assert(copiedAnswer.includes('算法已完成'));
+  await answerActions.getByRole('button',{name:'引用回复',exact:true}).click();
+  await page.getByText('回复引用 · GAIA 回答',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'取消引用或编辑',exact:true}).click();
+  await questionActions.getByRole('button',{name:'编辑为新提问',exact:true}).click();
+  assert.equal(await page.getByLabel('自然语言任务',{exact:true}).inputValue(),'Desktop buffer verification');
+  await page.getByRole('button',{name:'取消引用或编辑',exact:true}).click();
+  await answerActions.getByRole('button',{name:'赞同回答',exact:true}).click();
+  await page.waitForFunction(id=>document.querySelector('[data-run-id="'+id+'"] [aria-label="赞同回答"]')?.getAttribute('aria-pressed')==='true',analysis.runId);
+  const rewrittenRequest=page.waitForResponse(r=>r.url()==='gaia://app/api/runs'&&r.request().method()==='POST');
+  await answerActions.getByRole('button',{name:'重新回答',exact:true}).click();const rewrittenId=(await(await rewrittenRequest).json()).id;
+  const rewrite=await page.evaluate(async id=>{const deadline=Date.now()+30000;while(Date.now()<deadline){const value=await(await fetch('/api/runs/'+id)).json();if(!['queued','running'].includes(value.status))return value;await new Promise(r=>setTimeout(r,100))}throw new Error('Read-only answer did not settle')},rewrittenId);
+  assert.equal(rewrite.status,'completed');assert.equal(rewrite.reanswer_of,analysis.runId);assert.deepEqual(rewrite.steps,[]);
+  assert.equal(await page.evaluate(async()=>(await(await fetch('/api/layers')).json()).length),result.count);
+  console.log('Question/answer native clipboard, quote, edit, feedback and read-only reanswer passed');
   fs.mkdirSync(path.resolve(__dirname,'../../.desktop-build/qa'),{recursive:true});
   await page.screenshot({path:path.resolve(__dirname,'../../.desktop-build/qa/desktop-'+process.platform+'-'+process.arch+'.png')});
   fs.writeFileSync(path.resolve(__dirname,'../../.desktop-build/qa/smoke-user-data.txt'),userData);
@@ -152,7 +173,8 @@ const {_electron:electron}=require('playwright');const path=require('node:path')
   assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('geoagent-preferences-v1')).max_output_tokens),16384);
   assert.equal(await page.evaluate(()=>Number(localStorage.getItem('gaia-assistant-width-v1'))),assistantWidth);
   assert.equal(await page.evaluate(async id=>(await(await fetch('/api/layers')).json()).some(x=>x.id===id),imported.id),false);
-  const report={desktop:'passed',version:require('../package.json').version,platform:process.platform,arch:process.arch,packaged:!!process.env.GAIA_PACKAGED_EXECUTABLE,layers:count,font:analysis.font,userData,checks:['private-API','QGIS-analysis','Chinese-Shapefile-truncated-field-import','layer-delete-and-undo','natural-language-layer-removal','assistant-pointer-resize','layer-removal-and-assistant-width-persistence','installed-font-catalog','native-style-scene','offline-natural-language-styles','manual-style-and-font-controls','model-output-budget-persistence','PDF-export','native-file-save','interactive-map','restart-preserves-layers-and-style-and-font']};
+  assert.equal(await page.evaluate(async id=>(await(await fetch('/api/runs/'+id)).json()).feedback?.value,analysis.runId),'up');
+  const report={desktop:'passed',version:require('../package.json').version,platform:process.platform,arch:process.arch,packaged:!!process.env.GAIA_PACKAGED_EXECUTABLE,layers:count,font:analysis.font,userData,checks:['private-API','QGIS-analysis','Chinese-Shapefile-truncated-field-import','layer-delete-and-undo','natural-language-layer-removal','assistant-pointer-resize','layer-removal-and-assistant-width-persistence','installed-font-catalog','native-style-scene','offline-natural-language-styles','manual-style-and-font-controls','model-output-budget-persistence','PDF-export','native-file-save','interactive-map','question-and-answer-native-clipboard','message-quote-and-edit','message-feedback-persists','read-only-reanswer-no-GIS','restart-preserves-layers-and-style-and-font']};
   fs.writeFileSync(path.resolve(__dirname,'../../.desktop-build/qa/smoke-'+process.platform+'-'+process.arch+(report.packaged?'-packaged':'-development')+'.json'),JSON.stringify(report,null,2));
   console.log(JSON.stringify(report));
  }catch(error){

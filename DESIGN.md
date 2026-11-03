@@ -149,6 +149,10 @@ The assistant boundary is a 10px pointer/touch separator with a 3 × 40px rounde
 
 Layer deletion is a quiet trash icon in each data row, using muted text until hover/focus. It removes a workspace layer and retains source/recovery data; show an undo action in the existing toast. Keep deletion distinct from the adjacent visibility control and from deleting geographic features. Names, counts, ambiguity, persistence and receipt integrity are execution behavior, not decoration.
 
+Message actions use a quiet 32px rounded icon row beneath each message, with 10px tabular timestamps. User controls align right; answer controls align left and wrap at narrow widths. Copy feedback uses a temporary checkmark only after success. Preserve readable focus, tooltip names and explicit pressed states for ratings. More actions use a native auto popover in the top layer, positioned inside the viewport, with light-dismiss and Escape behavior. Do not put the menu inside a clipped scroll surface.
+
+Assistant Markdown uses the existing 14px body, 18px section headings, 12px monospace code and horizontally scrolling tables. Code blocks have their own copy control, excluded from copied prose. Quote previews and edited-question drafts sit inside the existing composer with a 2px accent boundary. Editing explicitly starts a new task; regenerating an answer is a distinct, read-only operation with no GIS tools. Feedback records user preference about the answer, never spatial correctness. Local speech is optional and must disclose unavailable voices rather than simulating playback.
+
 ### Native print editor
 
 The actual QGIS scene supplies movable items and preview imagery. Both horizontal and vertical rulers use real page dimensions. Selected objects retain resize handles, millimetre properties, visibility, lock and undo/redo. Selecting an item opens its properties even when the sidebar was previously collapsed.

@@ -171,6 +171,44 @@
 .atlas-workbench .artifact-link>span {flex:1;text-align:left;overflow-wrap:anywhere}
 .atlas-workbench .message-footer {font-size:10px;line-height:1.6;flex-wrap:wrap}
 .atlas-workbench .conversation {margin-bottom:24px;padding-bottom:22px;border-bottom:1px solid var(--border-soft)}
+.message-actions {display:flex;align-items:center;gap:3px;flex-wrap:wrap;padding:5px 0;color:var(--muted);min-height:38px}
+.message-actions.user-message-actions {justify-content:flex-end}
+.atlas-workbench .message-actions>button {background:transparent;border:0;border-radius:8px;color:var(--muted);width:32px;min-height:32px;padding:7px}
+.atlas-workbench .message-actions>button:hover:not(:disabled) {background:var(--hover);color:var(--ink)}
+.atlas-workbench .message-actions>button[aria-pressed=true] {background:var(--selection);color:var(--link)}
+.message-actions time {font-size:10px;font-variant-numeric:tabular-nums;white-space:nowrap;margin:0 5px}
+.message-more-items {position:fixed;inset:auto;margin:0;padding:5px;width:225px;max-width:calc(100vw - 24px);max-height:240px;overflow:auto;border:1px solid var(--border);border-radius:12px;background:var(--pane);color:var(--ink);box-shadow:var(--float-shadow)}
+.atlas-workbench .message-more-items>button {display:flex;justify-content:flex-start;width:100%;border:0;background:transparent;text-align:left;padding:9px 10px;gap:9px;min-height:38px}
+.atlas-workbench .message-more-items>button:hover {background:var(--hover)}
+.message-more-items::backdrop {background:transparent}
+.atlas-workbench .message-markdown {white-space:normal}
+.message-markdown>:first-child {margin-top:8px}
+.message-markdown p {margin:10px 0;white-space:pre-wrap}
+.message-markdown h1,.message-markdown h2,.message-markdown h3,.message-markdown h4 {line-height:1.55;margin:22px 0 10px;font-weight:650}
+.message-markdown h1 {font-size:21px}.message-markdown h2 {font-size:18px}.message-markdown h3 {font-size:16px}.message-markdown h4 {font-size:14px}
+.message-markdown ul,.message-markdown ol {padding-left:23px;margin:10px 0}
+.message-markdown li {margin:5px 0}.message-markdown li>p {margin:5px 0}
+.message-markdown blockquote {margin:12px 0;padding:2px 12px;border-left:3px solid var(--border);color:var(--muted)}
+.message-markdown hr {border:0;border-top:1px solid var(--border-soft);margin:20px 0}
+.message-markdown :not(pre)>code {font:12px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;border-radius:5px;padding:2px 5px;background:var(--control);overflow-wrap:anywhere}
+.message-code {margin:14px 0;border:1px solid var(--border-soft);border-radius:10px;overflow:hidden;background:var(--input)}
+.message-code>header {display:flex;align-items:center;justify-content:space-between;padding:4px 10px;border-bottom:1px solid var(--border-soft);font-size:11px;color:var(--muted)}
+.atlas-workbench .message-code>header button {border:0;background:transparent;color:var(--muted);font-size:11px;padding:4px;min-height:28px}
+.message-code pre {margin:0;padding:13px;overflow:auto;white-space:pre;line-height:1.65;font-size:12px}
+.message-code code {font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.message-table {max-width:100%;overflow:auto;margin:14px 0;border:1px solid var(--border-soft);border-radius:9px}
+.message-table table {border-collapse:collapse;font-size:12px;width:max-content;min-width:100%}
+.message-table th,.message-table td {padding:8px 10px;text-align:left;border-bottom:1px solid var(--border-soft);white-space:normal;max-width:320px;vertical-align:top}
+.message-table th {font-weight:600;background:var(--input)}.message-table tr:last-child td {border:0}
+.message-reply-reference {margin:0 0 12px;padding:6px 10px;border-left:2px solid var(--border);font-size:11px;color:var(--muted)}
+.message-reply-reference summary {cursor:pointer}.message-reply-reference blockquote {margin:8px 0;max-height:160px;overflow:auto;white-space:pre-wrap}
+.message-origin {font-size:11px;color:var(--muted);margin:0 0 8px}
+.atlas-workbench .composer-reference {grid-column:1/-1;display:flex;align-items:flex-start;gap:8px;padding:8px 0 8px 10px;margin-bottom:4px;border-left:2px solid var(--accent-ui,var(--accent));font-size:11px;color:var(--muted)}
+.atlas-workbench .composer-reference[hidden] {display:none}
+.composer-reference>div {flex:1;min-width:0}.composer-reference strong {display:block;font-weight:600;color:var(--ink);font-size:11px;margin-bottom:4px}
+.composer-reference span {display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;line-height:1.7;white-space:pre-wrap}
+.atlas-workbench .composer-reference>button {border:0;background:transparent;padding:3px;min-height:24px;color:var(--muted)}
+.atlas-workbench .older-messages {display:block;margin:0 auto 20px;border:0;background:transparent;color:var(--muted);font-size:11px}
 
 /* Folio: semantic elements and real native QGIS page, never a flattened mockup. */
 .atlas-workbench[data-view=layout] .workspace {--assistant-limit:calc(100vw - var(--folio-width) - 450px);grid-template-columns:var(--folio-width) minmax(0,1fr) 10px var(--assistant-track)}

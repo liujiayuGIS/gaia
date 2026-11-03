@@ -12,6 +12,28 @@ import sys
 ROOT=Path(__file__).resolve().parents[1]
 
 
+def frontend_licenses(destination):
+    """Preserve installed npm license texts alongside the existing notices."""
+    todo=[ROOT/'frontend/node_modules'];packages=[]
+    while todo:
+        modules=todo.pop()
+        if not modules.is_dir():continue
+        for entry in sorted(modules.iterdir()):
+            folders=sorted(entry.iterdir()) if entry.name.startswith('@') and entry.is_dir() else [entry]
+            for folder in folders:
+                meta=folder/'package.json'
+                if not meta.is_file():continue
+                item=json.loads(meta.read_text(encoding='utf-8'));name=item.get('name',folder.name);version=item.get('version','unknown')
+                packages.append({k:item.get(k) for k in ('name','version','license','repository')})
+                dest=destination/(name.replace('/','__')+'-'+version)
+                for source in folder.iterdir():
+                    if source.is_file() and source.name.lower().startswith(('license','copying','notice')):
+                        dest.mkdir(parents=True,exist_ok=True);shutil.copy2(source,dest/source.name)
+                todo.append(folder/'node_modules')
+    destination.mkdir(parents=True,exist_ok=True)
+    (destination/'packages.json').write_text(json.dumps(packages,ensure_ascii=False,indent=2),encoding='utf-8')
+
+
 def main():
     parser=argparse.ArgumentParser()
     parser.add_argument('--prefix',type=Path,default=ROOT/'.runtime/desktop-env')
@@ -24,6 +46,7 @@ def main():
     python=prefix/('python.exe' if sys.platform=='win32' else 'bin/python')
     subprocess.run([str(python),'-m','pip','install','-r',str(ROOT/'desktop/requirements-app.txt')],check=True)
     licenses=target/'licenses';licenses.mkdir(exist_ok=True)
+    frontend_licenses(licenses/'frontend')
     packages=[]
     for metadata in sorted((prefix/'conda-meta').glob('*.json')):
         item=json.loads(metadata.read_text())

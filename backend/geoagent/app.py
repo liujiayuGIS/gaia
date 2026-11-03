@@ -22,6 +22,7 @@ from . import demo, gis, formats, algorithms, cartography
 from .memory import Memory
 from .memory_tools import Acceptance, VerificationChecks
 from .spatial_contracts import SpatialContext,LayerSemantics
+from .conversation import MessageReference,Feedback,source_run,reference,evidence
 
 ROOT=Path(__file__).resolve().parents[2]
 
@@ -51,6 +52,9 @@ class ChatRequest(BaseModel):
     verification_checks: VerificationChecks | None=None
     analysis_context: SpatialContext | None=None
     vision_enabled: bool=True
+    reply_to: MessageReference | None=None
+    edit_of: str | None=Field(default=None,max_length=100)
+    reanswer_of: str | None=Field(default=None,max_length=100)
 
 class ResumeRequest(BaseModel):
     model_config=ConfigDict(extra='forbid')
@@ -476,12 +480,24 @@ def create_app(workspace=None):
 
     @app.post('/api/runs',status_code=202)
     def chat(body:ChatRequest):
+        quoted=reference(store,body.reply_to,body.session_id) if body.reply_to else None
+        if body.edit_of:source_run(store,body.edit_of,body.session_id)
+        original=None
+        if body.reanswer_of:
+            original=source_run(store,body.reanswer_of,body.session_id)
+            if original['status'] in ('queued','running','waiting_approval'):raise ValueError('请等待原任务结束，再重新回答。')
+            if body.mode not in ('model','offline') or any((body.algorithm_id,body.code,body.workflow_id,body.recipe_id,body.verify_recipe_id,body.arguments,body.inputs,body.acceptance,body.analysis_context)):
+                raise ValueError('重新回答仅整理原任务记录，不能包含新的处理操作。')
         config=None
         if body.mode=='model':config=resolve_config(body.base_url,body.model,body.api_key,body.protocol,body.reasoning_effort,body.max_output_tokens)
         elif body.mode not in ('offline','algorithm','workflow','code'):raise ValueError('未知运行模式。')
         if body.verify_recipe_id and body.verification_checks is None:raise ValueError('配方验证需要明确验收条件。')
         data=body.model_dump(exclude={'api_key','base_url','model','protocol','reasoning_effort','max_output_tokens','message'},exclude_none=True)
         if body.analysis_context:data['analysis_context']=body.analysis_context.model_dump(exclude_unset=True)
+        if quoted:data['reply_to']=quoted
+        if original:
+            data['answer_source']=evidence(store,original)
+            data['selected_layers']=[]
         run={**data,'id':uuid.uuid4().hex,'message_input':body.message,'created_at':now(),'message':'','output_layers':[],
              'model_config':{k:v for k,v in (config or {}).items() if k!='api_key'}}
         Memory(store).session(body.session_id,body.message)
@@ -489,8 +505,20 @@ def create_app(workspace=None):
 
     @app.get('/api/runs/{run_id}')
     def get_run(run_id:str):
-        try:return {**store.run(run_id),'events':store.events(run_id),'steps':store.steps(run_id)}
+        try:
+            value=store.run(run_id)
+            try:feedback=store.object('message_feedback',run_id)
+            except ValueError:feedback=None
+            return {**value,'events':store.events(run_id),'steps':store.steps(run_id),'feedback':feedback}
         except KeyError:raise HTTPException(404,'运行不存在。')
+
+    @app.patch('/api/runs/{run_id}/feedback')
+    def feedback(run_id:str,body:Feedback):
+        try:store.run(run_id)
+        except KeyError:raise HTTPException(404,'运行不存在。')
+        if body.value is None:
+            store.delete_object('message_feedback',run_id);return None
+        return store.put_object('message_feedback',run_id,{'value':body.value,'updated_at':now()})
 
     @app.post('/api/runs/{run_id}/resume',status_code=202)
     def resume_run(run_id:str,body:ResumeRequest):
