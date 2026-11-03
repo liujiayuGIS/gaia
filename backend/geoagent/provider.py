@@ -103,6 +103,8 @@ def error_details(response, secret=''):
         lines.append('参数：'+param)
     if provider_message:
         lines.append('服务说明：'+provider_message)
+        if status==400 and 'reasoning_content' in provider_message and 'missing' in provider_message.lower():
+            lines.append('此任务缺少服务商要求的历史推理状态；旧版已丢失的推理内容无法恢复。请新建任务，已有图层和成果仍保留。')
     elif not code:
         lines.append('服务未返回标准 JSON 错误详情，请检查 API 根地址和网络代理。')
     return {'status':status,'code':code,'param':param,'message':'\n'.join(lines)}

@@ -182,13 +182,17 @@ def test_deepseek_reasoning_content_is_replayed_with_tool_results(tmp_path,monke
         payload=json.loads(request.content);seen.append(payload)
         assert payload['model']=='deepseek-reasoner' and payload['max_tokens']==8192
         assert 'max_completion_tokens' not in payload and 'temperature' not in payload
+        assert all('reasoning_content' in message for message in payload['messages'] if message.get('role')=='assistant')
         if len(seen)==1:
             message={'role':'assistant','content':None,'reasoning_content':'TEST_PROVIDER_STATE',
                 'tool_calls':[{'id':'call_1','type':'function','function':{'name':'list_layers','arguments':'{}'}}]}
-        else:
+        elif len(seen)==2:
             assert any(x.get('reasoning_content')=='TEST_PROVIDER_STATE' for x in payload['messages'])
             assert any(x.get('role')=='tool' and x.get('tool_call_id')=='call_1' for x in payload['messages'])
             message={'role':'assistant','content':'已读取图层。','reasoning_content':'TEST_FINAL_STATE'}
+        else:
+            assert any('已读取图层' in (x.get('content') or '') for x in payload['messages'])
+            message={'role':'assistant','content':'已结合上次记录回答。','reasoning_content':'TEST_NEXT_RUN_STATE'}
         return httpx.Response(200,json={'choices':[{'message':message,'finish_reason':'tool_calls' if len(seen)==1 else 'stop'}]})
     original=httpx.Client
     monkeypatch.setattr('geoagent.provider.httpx.Client',lambda **kw:original(transport=httpx.MockTransport(respond),**kw))
@@ -197,3 +201,5 @@ def test_deepseek_reasoning_content_is_replayed_with_tool_results(tmp_path,monke
     execute_run(store,Registry(store),run,config,threading.Event())
     assert store.run('deepseek')['status']=='completed' and len(seen)==2
     assert 'TEST_PROVIDER_STATE' not in json.dumps(store.events('deepseek'))
+    execute_run(store,Registry(store),{'id':'deepseek-next','mode':'model','session_id':'s','message_input':'根据上次记录回答'},config,threading.Event())
+    assert store.run('deepseek-next')['status']=='completed' and len(seen)==3
